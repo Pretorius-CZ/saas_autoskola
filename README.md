@@ -111,6 +111,48 @@ Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
 
 ---
 
+## Dva přístupy do databáze
+
+V `.env.local` jsou dva připojovací řetězce a záměna by byla tichá chyba,
+proto rozdíl stojí za zapamatování.
+
+| Proměnná | Účet | Kdo ji používá |
+|---|---|---|
+| `DATABASE_URL` | `autoskola_app` | aplikace — čte a zapisuje řádky, nic víc |
+| `DATABASE_URL_OWNER` | `neondb_owner` | migrace (`db:push`), seed, `db:rls` |
+| `DATABASE_URL_UNPOOLED` | `neondb_owner` | zálohy (`pg_dump`) |
+
+**Na Vercelu je jen `DATABASE_URL`.** Nasazená aplikace nemá mít právo
+zahodit tabulku, a nemá ho.
+
+Důvod, proč to takhle je: výchozí účet od Neonu má oprávnění `BYPASSRLS`
+— ignoruje pravidla o tom, kdo smí vidět který řádek. Dokud se aplikace
+připojovala jím, byla izolace dat jen na papíře. Ověřeno měřením, ne úvahou.
+
+Pozor: `neon link` přepíše `DATABASE_URL` zpátky na vlastníka. Poznáš to
+podle toho, že `npm run db:rls` začne křičet o `BYPASSRLS`.
+
+## Izolace dat po autoškolách
+
+```powershell
+npm run db:role    # vyrobí omezený účet pro aplikaci (a nové heslo)
+npm run db:rls     # zapne pravidla a hned je ověří
+```
+
+Každá transakce si nastaví `app.tenant_id` a databáze pak vydá jen řádky
+té autoškoly. **Bez nastavení nevydá nic** — mlčení znamená nic, ne všechno.
+
+V aplikaci se do databáze chodí výhradně přes `proAutoskolu()`
+(`src/lib/db-tenant.ts`). Nastavení platí jen do konce transakce; kdyby ve
+spojení zůstalo viset, obsloužil by další požadavek pod cizí autoškolou.
+
+Podmínky `where tenantId = …` v dotazech zůstávají. Databáze je pojistka,
+ne náhrada za pečlivost.
+
+**Když přidáš tabulku se sloupcem `tenant_id`**, dopiš ji do seznamu
+`TABULKY` v `src/db/rls.ts` a spusť `npm run db:rls`. Jinak zůstane
+nechráněná a nic tě na to neupozorní.
+
 ## Zálohy
 
 ```powershell
@@ -132,13 +174,28 @@ za měsíc — záloha, kterou jsi nikdy neobnovil, není záloha.
 Neon má vlastní historii, ale na bezplatném tarifu jen **6 hodin zpátky**.
 Proto ty soubory u sebe.
 
-## Co je hotové z prvního týdne
+## Co je hotové
 
-- projekt, databáze v Neonu (Frankfurt), první migrace
+**Základy**
+
+- projekt, databáze v Neonu (Frankfurt), migrace
 - nasazení na Vercelu, běží na vlastní adrese
 - Sentry v EU, ověřené odesláním skutečné chyby,
   vypnuté posílání osobních údajů a obsahu formulářů
 - zálohování a **ověřená** obnova
+
+**Autoškola**
+
+- přihlašování e-mailem a heslem, registrace zavřená
+- karta autoškoly, čtyři učitelé, čtyři vozidla
+- hlídání propadajících lhůt (osvědčení, zdravotní způsobilost, STK)
+- izolace dat po autoškolách vynucená databází
+
+## Co zbývá
+
+- zakládání účtů učitelům a žákům (dveře jsou zavřené, klíč nemá nikdo)
+- úprava karet učitelů a vozidel v aplikaci (zatím jen přes seed)
+- obnova zapomenutého hesla (potřebuje odesílání e-mailů)
 
 ---
 
