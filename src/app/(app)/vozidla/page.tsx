@@ -1,5 +1,5 @@
 import { asc, eq } from "drizzle-orm";
-import { getDb } from "@/db";
+import { proAutoskolu } from "@/lib/db-tenant";
 import { vozidla } from "@/db/schema";
 import { vyzadujPrihlaseni } from "@/lib/relace";
 import { dniDo, formatDatum } from "@/lib/datum";
@@ -8,14 +8,13 @@ export const dynamic = "force-dynamic";
 
 export default async function Vozidla() {
   const kdo = await vyzadujPrihlaseni();
-  const db = getDb();
-  if (!db) throw new Error("Databáze není dostupná.");
-
-  const seznam = await db
-    .select()
-    .from(vozidla)
-    .where(eq(vozidla.tenantId, kdo.autoskola.id))
-    .orderBy(asc(vozidla.znacka), asc(vozidla.typ));
+  const seznam = await proAutoskolu(kdo.autoskola.id, (tx) =>
+    tx
+      .select()
+      .from(vozidla)
+      .where(eq(vozidla.tenantId, kdo.autoskola.id))
+      .orderBy(asc(vozidla.znacka), asc(vozidla.typ)),
+  );
 
   return (
     <main>

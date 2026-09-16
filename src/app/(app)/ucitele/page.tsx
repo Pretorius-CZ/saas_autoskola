@@ -1,5 +1,5 @@
 import { and, asc, eq } from "drizzle-orm";
-import { getDb } from "@/db";
+import { proAutoskolu } from "@/lib/db-tenant";
 import { ucitele } from "@/db/schema";
 import { vyzadujPrihlaseni } from "@/lib/relace";
 import { dniDo, formatDatum } from "@/lib/datum";
@@ -31,14 +31,15 @@ function Platnost({ datum }: { datum: string | null }) {
 
 export default async function Ucitele() {
   const kdo = await vyzadujPrihlaseni();
-  const db = getDb();
-  if (!db) throw new Error("Databáze není dostupná.");
-
-  const seznam = await db
-    .select()
-    .from(ucitele)
-    .where(eq(ucitele.tenantId, kdo.autoskola.id))
-    .orderBy(asc(ucitele.prijmeni), asc(ucitele.jmeno));
+  // Podmínku na autoškolu píšeme dál, i když ji databáze hlídá sama.
+  // Dva zámky na jedněch dveřích jsou levné; chybějící zámek ne.
+  const seznam = await proAutoskolu(kdo.autoskola.id, (tx) =>
+    tx
+      .select()
+      .from(ucitele)
+      .where(eq(ucitele.tenantId, kdo.autoskola.id))
+      .orderBy(asc(ucitele.prijmeni), asc(ucitele.jmeno)),
+  );
 
   return (
     <main>

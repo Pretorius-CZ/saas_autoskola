@@ -1,6 +1,6 @@
 import Link from "next/link";
-import { and, eq, sql } from "drizzle-orm";
-import { getDb } from "@/db";
+import { and, eq } from "drizzle-orm";
+import { proAutoskolu } from "@/lib/db-tenant";
 import { ucitele, vozidla } from "@/db/schema";
 import { vyzadujPrihlaseni } from "@/lib/relace";
 import { dniDo, formatDatum } from "@/lib/datum";
@@ -12,19 +12,18 @@ const PREDSTIH_DNI = 60;
 
 export default async function Prehled() {
   const kdo = await vyzadujPrihlaseni();
-  const db = getDb();
-  if (!db) throw new Error("Databáze není dostupná.");
-
-  const [u, v] = await Promise.all([
-    db
+  // Obojí v jedné transakci — nastavení autoškoly platí jen uvnitř ní.
+  const { u, v } = await proAutoskolu(kdo.autoskola.id, async (tx) => {
+    const u = await tx
       .select()
       .from(ucitele)
-      .where(and(eq(ucitele.tenantId, kdo.autoskola.id), eq(ucitele.aktivni, true))),
-    db
+      .where(and(eq(ucitele.tenantId, kdo.autoskola.id), eq(ucitele.aktivni, true)));
+    const v = await tx
       .select()
       .from(vozidla)
-      .where(and(eq(vozidla.tenantId, kdo.autoskola.id), eq(vozidla.aktivni, true))),
-  ]);
+      .where(and(eq(vozidla.tenantId, kdo.autoskola.id), eq(vozidla.aktivni, true)));
+    return { u, v };
+  });
 
   // Co propadá nebo už propadlo. Jeden seznam, ne tři — zajímá tě,
   // co musíš řešit, ne v které tabulce to je.

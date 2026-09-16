@@ -17,7 +17,7 @@ import { tenants, ucitele, users, vozidla } from "./schema";
 
 config({ path: ".env.local" });
 
-const url = process.env.DATABASE_URL;
+const url = process.env.DATABASE_URL_OWNER ?? process.env.DATABASE_URL;
 if (!url) {
   console.error("Chybí DATABASE_URL. Zkontroluj .env.local.");
   process.exit(1);
@@ -80,12 +80,18 @@ async function main() {
   }
 
   // --- učitelé --------------------------------------------------------------
-  const [{ pocetUcitelu }] = await db
+  // Od zapnutí izolace (npm run db:rls) platí, že bez nastavené autoškoly
+  // databáze nevydá ani nepřijme řádek. Proto i seed pracuje v transakci
+  // s nastaveným app.tenant_id — jinak by nic neviděl a zakládal by pořád dokola.
+  await db.transaction(async (tx) => {
+    await tx.execute(sql`select set_config('app.tenant_id', ${autoskola.id}, true)`);
+
+  const [{ pocetUcitelu }] = await tx
     .select({ pocetUcitelu: sql<number>`count(*)::int` })
     .from(ucitele);
 
   if (pocetUcitelu === 0) {
-    await db.insert(ucitele).values([
+    await tx.insert(ucitele).values([
       {
         tenantId: autoskola.id,
         jmeno: "Petr",
@@ -144,12 +150,12 @@ async function main() {
   }
 
   // --- vozidla --------------------------------------------------------------
-  const [{ pocetVozidel }] = await db
+  const [{ pocetVozidel }] = await tx
     .select({ pocetVozidel: sql<number>`count(*)::int` })
     .from(vozidla);
 
   if (pocetVozidel === 0) {
-    await db.insert(vozidla).values([
+    await tx.insert(vozidla).values([
       {
         tenantId: autoskola.id,
         znacka: "Škoda",
@@ -190,6 +196,7 @@ async function main() {
   } else {
     console.log(`Vozidla už existují (${pocetVozidel}), nechávám být.`);
   }
+  });
 
   console.log("Hotovo.");
 }
