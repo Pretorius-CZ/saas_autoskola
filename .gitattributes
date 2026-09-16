@@ -1,0 +1,14 @@
+# Sjednocené konce řádků: v repozitáři vždy LF, u tebe na Windows CRLF.
+# Bez tohoto souboru git u každého commitu varuje a diffy bývají celé "změněné".
+* text=auto eol=lf
+
+# Skripty pro PowerShell nech s windowsovými konci řádků.
+*.ps1 text eol=crlf
+
+# Binární soubory git nesmí přepisovat.
+*.png binary
+*.jpg binary
+*.pdf binary
+*.ico binary
+*.woff binary
+*.woff2 binary
