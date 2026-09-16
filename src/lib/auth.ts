@@ -1,7 +1,7 @@
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { getDb } from "@/db";
-import { adresaAplikace, env } from "@/lib/env";
+import { adresaAplikace, duveryhodneAdresy, env } from "@/lib/env";
 import * as schema from "@/db/schema";
 
 const db = getDb();
@@ -21,6 +21,7 @@ if (!env.BETTER_AUTH_SECRET) {
 export const auth = betterAuth({
   baseURL: adresaAplikace(),
   secret: env.BETTER_AUTH_SECRET,
+  trustedOrigins: duveryhodneAdresy(),
 
   database: drizzleAdapter(db, {
     provider: "pg",
