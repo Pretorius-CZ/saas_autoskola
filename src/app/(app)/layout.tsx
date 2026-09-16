@@ -1,0 +1,52 @@
+import Link from "next/link";
+import { vyzadujPrihlaseni } from "@/lib/relace";
+import Odhlaseni from "@/components/odhlaseni";
+
+// Chráněná část aplikace se nesmí cachovat — vždy se ptáme, kdo se dívá.
+export const dynamic = "force-dynamic";
+
+const odkazy = [
+  { href: "/", popis: "Přehled" },
+  { href: "/ucitele", popis: "Učitelé" },
+  { href: "/vozidla", popis: "Vozidla" },
+  { href: "/nastaveni", popis: "Nastavení" },
+  { href: "/stav", popis: "Stav" },
+];
+
+export default async function AppLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  // Tohle je ta jediná řádka, která drží celou chráněnou část zavřenou.
+  const kdo = await vyzadujPrihlaseni();
+
+  return (
+    <div className="mx-auto max-w-4xl px-4 py-6">
+      <header className="flex flex-wrap items-baseline justify-between gap-2 border-b border-neutral-200 pb-4 dark:border-neutral-800">
+        <div>
+          <p className="font-semibold">{kdo.autoskola.nazev}</p>
+          <p className="text-sm text-neutral-500">
+            {kdo.jmeno}
+            {kdo.role === "spravce" ? " · správce" : null}
+          </p>
+        </div>
+        <Odhlaseni />
+      </header>
+
+      <nav className="flex gap-4 overflow-x-auto py-4 text-sm">
+        {odkazy.map((o) => (
+          <Link
+            key={o.href}
+            href={o.href}
+            className="whitespace-nowrap text-neutral-600 underline-offset-4 hover:underline dark:text-neutral-300"
+          >
+            {o.popis}
+          </Link>
+        ))}
+      </nav>
+
+      {children}
+    </div>
+  );
+}
