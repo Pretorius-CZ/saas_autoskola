@@ -111,18 +111,34 @@ Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
 
 ---
 
-## Zbytek prvního týdne
+## Zálohy
 
-Po bodech výše zbývá:
+```powershell
+.\zaloha.ps1          # stáhne databázi do souboru
+.\test-obnovy.ps1     # ověří, že ten soubor jde obnovit
+```
 
-1. **Nasadit na Vercel** — projekt propojit s repozitářem na GitHubu,
-   do nastavení projektu na Vercelu vložit `DATABASE_URL` jako
-   *Environment Variable* (Production i Preview). Pak otevřít vygenerovanou
-   adresu a zkontrolovat, že jsou na ní stejné čtyři zelené řádky.
-2. **Sentry** — sledování chyb, při zakládání účtu zvolit **EU** úložiště.
-   Zvolit region nejde později změnit.
-3. **Záloha** — ručně stáhnout dump databáze a *skutečně ho obnovit*
-   do prázdné databáze. Záloha, kterou jsi nikdy neobnovil, není záloha.
+Zálohy se ukládají **vedle projektu**, ne do něj — do složky
+`zalohy-autoskola`. Je to schválně: jsou v nich osobní údaje žáků
+a uvnitř projektu by dřív nebo později skončily na GitHubu.
+
+`test-obnovy.ps1` založí v Neonu dočasnou prázdnou databázi, obnoví do ní
+poslední zálohu, vypíše, jaké tabulky vznikly, a databázi zase smaže.
+Ostrá databáze se při tom nemění, jen se z ní čte.
+
+Zálohu pusť před každou větší změnou schématu. Test obnovy aspoň jednou
+za měsíc — záloha, kterou jsi nikdy neobnovil, není záloha.
+
+Neon má vlastní historii, ale na bezplatném tarifu jen **6 hodin zpátky**.
+Proto ty soubory u sebe.
+
+## Co je hotové z prvního týdne
+
+- projekt, databáze v Neonu (Frankfurt), první migrace
+- nasazení na Vercelu, běží na vlastní adrese
+- Sentry v EU, ověřené odesláním skutečné chyby,
+  vypnuté posílání osobních údajů a obsahu formulářů
+- zálohování a **ověřená** obnova
 
 ---
 

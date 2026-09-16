@@ -101,7 +101,7 @@ export default async function Page() {
 
       <p className="text-sm text-neutral-500">
         {vseOk
-          ? "První týden je hotový. Zbývá ověřit zálohu a můžeme na druhý."
+          ? "Základy stojí: databáze, nasazení, sledování chyb i ověřená záloha."
           : "Zatím nesedí všechno — postup je v souboru README.md."}
       </p>
     </main>

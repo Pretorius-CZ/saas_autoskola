@@ -1,10 +1,13 @@
-# push.ps1 — jeden příkaz místo tří
+# push.ps1 - jeden prikaz misto tri
 #
-# Použití:
-#   .\push.ps1 "co jsem změnil"
+# Pouziti:
+#   .\push.ps1 "co jsem zmenil"
 #
-# Když popis nenapíšeš, doplní se datum a čas.
-# Když není co commitovat, skript to jen oznámí a skončí.
+# Kdyz popis nenapises, doplni se datum a cas.
+# Kdyz neni co commitovat, skript to jen oznami a skonci.
+#
+# POZOR: tento soubor je zamerne bez diakritiky. Windows PowerShell 5.1
+# cte skripty v ceskem kodovani a na UTF-8 diakritice se rozsype.
 
 param(
     [Parameter(Position = 0)]
@@ -13,26 +16,26 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-# pracuj vždy ve složce, kde skript leží — ne tam, odkud ho pustíš
+# pracuj vzdy ve slozce, kde skript lezi - ne tam, odkud ho pustis
 Set-Location -Path $PSScriptRoot
 
 if ([string]::IsNullOrWhiteSpace($Zprava)) {
-    $Zprava = "průběžná změna " + (Get-Date -Format "d.M.yyyy HH:mm")
+    $Zprava = "prubezna zmena " + (Get-Date -Format "d.M.yyyy HH:mm")
 }
 
 git add -A
 
-# --quiet vrátí nenulový kód, když jsou změny připravené k commitu
+# --quiet vrati nenulovy kod, kdyz jsou zmeny pripravene k commitu
 git diff --cached --quiet
 if ($LASTEXITCODE -eq 0) {
-    Write-Host "Nic se nezměnilo, není co commitovat." -ForegroundColor Yellow
+    Write-Host "Nic se nezmenilo, neni co commitovat." -ForegroundColor Yellow
     exit 0
 }
 
-Write-Host "Commituju: $Zprava" -ForegroundColor Cyan
+Write-Host "Commituji: $Zprava" -ForegroundColor Cyan
 git commit -m $Zprava
 
-Write-Host "Posílám na GitHub..." -ForegroundColor Cyan
+Write-Host "Posilam na GitHub..." -ForegroundColor Cyan
 git push
 
 Write-Host "Hotovo." -ForegroundColor Green
