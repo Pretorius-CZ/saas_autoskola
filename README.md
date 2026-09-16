@@ -111,6 +111,47 @@ Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
 
 ---
 
+## Rozjetí na novém počítači
+
+Složku nekopíruj — stáhni projekt z GitHubu. `node_modules` v gitu schválně
+není; `npm install` obnoví přesně ty samé verze podle `package-lock.json`.
+
+Nejdřív nainstaluj **Node.js 20+**, **Git** a **PostgreSQL 18** (v instalátoru
+nech zaškrtnuté jen *Command Line Tools*, server ani pgAdmin nepotřebuješ).
+
+```powershell
+git clone https://github.com/Pretorius-CZ/saas_autoskola.git
+cd saas_autoskola
+npm install
+
+npm i -g neon@latest
+neon login
+neon link --project-id wild-moon-18512350 --branch production -y
+
+# zkopíruj .env.local ze starého počítače, nebo doplň chybějící hodnoty:
+#   npm run db:role   → nové heslo účtu aplikace (DATABASE_URL)
+#   node -e "console.log(require('crypto').randomBytes(32).toString('base64url'))"
+#     → BETTER_AUTH_SECRET
+# POZOR: neon link přepíše DATABASE_URL na vlastníka. Po něm ho vrať
+# na účet autoskola_app a hodnotu od neon linku ulož jako DATABASE_URL_OWNER.
+
+npm run dev
+```
+
+**Co se nepřenese samo:**
+
+- `.env.local` — hesla a klíče (v `.gitignore`, a to je správně)
+- složka `zalohy-autoskola` — leží **vedle** projektu, ne v něm
+
+**Co se nestěhuje vůbec:** databáze v Neonu, nasazení na Vercelu a Sentry.
+Jsou v cloudu a vázané na tvoje účty. Nový počítač je jen nové okno do téhož.
+
+Jestli PowerShell odmítne spustit skripty:
+
+```powershell
+Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
+```
+
 ## Dva přístupy do databáze
 
 V `.env.local` jsou dva připojovací řetězce a záměna by byla tichá chyba,
