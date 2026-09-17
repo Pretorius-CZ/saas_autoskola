@@ -316,16 +316,20 @@ export default async function KartaZaka({
                 const potreba = konzultaciZaPredmet(p.hodin);
                 const hotovo = mel >= potreba;
                 return (
-                  <li key={p.klic} className="flex justify-between gap-3 text-sm">
-                    <span className={hotovo ? "text-neutral-500" : ""}>{p.nazev}</span>
-                    <span
-                      className={
-                        hotovo
-                          ? "tabular-nums text-emerald-600 dark:text-emerald-400"
-                          : "tabular-nums"
-                      }
-                    >
-                      {mel} / {potreba}
+                  // Splněný předmět zezelená celý, i s názvem. Zlomek
+                  // "2 / 1" se četl jako skóre, které nemůže přesáhnout
+                  // jedničku — proto se tu píšou hodiny a slovo.
+                  <li
+                    key={p.klic}
+                    className={
+                      hotovo
+                        ? "flex justify-between gap-3 text-sm text-emerald-600 dark:text-emerald-400"
+                        : "flex justify-between gap-3 text-sm"
+                    }
+                  >
+                    <span>{p.nazev}</span>
+                    <span className="tabular-nums">
+                      {hotovo ? `splněno · ${mel} h` : `${mel} h z ${potreba} h`}
                     </span>
                   </li>
                 );
