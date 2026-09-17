@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { and, asc, eq, ne, or } from "drizzle-orm";
 import { proAutoskolu } from "@/lib/db-tenant";
-import { kurzy, terminy, ucitele, vycviky, zaci } from "@/db/schema";
+import { kurzy, terminy, ucast, ucitele, vycviky, zaci } from "@/db/schema";
 import { vyzadujPrihlaseni } from "@/lib/relace";
 import { formatDatum, vekKDatu } from "@/lib/datum";
 import { formatTelefon } from "@/lib/telefon";
@@ -89,9 +89,16 @@ export default async function KartaZaka({
 
     // Jeho jízdy a teorie jeho kurzu — pro něj je to jeden rozvrh.
     const jehoTerminy = await tx
-      .select({ t: terminy, ucitel: ucitele })
+      .select({ t: terminy, ucitel: ucitele, pritomen: ucast.pritomen })
       .from(terminy)
       .leftJoin(ucitele, eq(ucitele.id, terminy.ucitelId))
+      // Docházka je vedená na žáka, ne na termín. Bez tohoto připojení
+      // by se konzultace počítala každému v kurzu stejně — i tomu,
+      // kdo nepřišel.
+      .leftJoin(
+        ucast,
+        and(eq(ucast.terminId, terminy.id), eq(ucast.vycvikId, zaznam.v.id)),
+      )
       .where(
         and(
           eq(terminy.tenantId, kdo.autoskola.id),
@@ -121,11 +128,27 @@ export default async function KartaZaka({
   const minutJizd = probehle
     .filter((x) => x.t.druh === "jizda")
     .reduce((s, x) => s + x.t.delkaMinut, 0);
+
   // Konzultace se počítají po předmětech — jinak nejde poznat, jestli
   // má žák odbytou zdravotnickou přípravu, nebo jen pět hodin předpisů.
+  //
+  // Počítá se jen to, co má zapsanou docházku a u čeho byl žák označený
+  // jako přítomný. Termín, který se konal, ale docházka u něj ještě není
+  // zapsaná, se nepočítá nikomu — místo toho se níže vypíše, kolik
+  // takových termínů čeká. Tichý odhad by u evidence, ze které se vydává
+  // průkaz žadatele, byl horší než přiznaná mezera.
   const konzultacePodlePredmetu = new Map<string, number>();
+  let konzultaceBezDochazky = 0;
+
   for (const x of probehle) {
     if (x.t.druh !== "teorie") continue;
+
+    if (x.t.stav !== "probehlo") {
+      konzultaceBezDochazky += 1;
+      continue;
+    }
+    if (!x.pritomen) continue;
+
     const klic = x.t.predmet ?? "?";
     konzultacePodlePredmetu.set(
       klic,
@@ -273,6 +296,14 @@ export default async function KartaZaka({
           <p className="col-span-full text-xs text-neutral-500">
             U přezkoušení osnova počet konzultací ani jízd nepředepisuje — hodiny
             se jen evidují.
+          </p>
+        ) : null}
+
+        {konzultaceBezDochazky > 0 ? (
+          <p className="col-span-full text-xs text-amber-600 dark:text-amber-400">
+            {konzultaceBezDochazky === 1
+              ? "U jedné proběhlé konzultace zatím není zapsaná docházka — do počtu se nezapočítala."
+              : `U ${konzultaceBezDochazky} proběhlých konzultací zatím není zapsaná docházka — do počtu se nezapočítaly.`}
           </p>
         ) : null}
 

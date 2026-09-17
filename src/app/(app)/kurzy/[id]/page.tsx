@@ -6,7 +6,7 @@ import { kurzy, terminy, ucitele, vycviky, zaci, zmeny } from "@/db/schema";
 import { vyzadujPrihlaseni } from "@/lib/relace";
 import { formatDatum } from "@/lib/datum";
 import { denAMesic, nazevDne, rozsah } from "@/lib/cas";
-import { PREDMETY } from "@/lib/osnova";
+import { PREDMETY, naHodiny } from "@/lib/osnova";
 import HistorieTabulka from "@/components/historie-tabulka";
 import { nactiNazvyOdkazu } from "@/lib/historie-data";
 
@@ -81,11 +81,21 @@ export default async function KartaKurzu({
   const { kurz, clenove, konzultace, historie, nazvy, lide } = data;
 
   const predmety = PREDMETY[kurz.skupina] ?? [];
+
+  // Odbyto = kolik hodin kurz v tom předmětu opravdu odučil. Počítají se
+  // hodiny, ne termíny — dvouhodinovka je dvě hodiny. A počítá se až to,
+  // co je označené jako proběhlé; u zbytku se čeká na docházku.
   const odbyto = new Map<string, number>();
+  let bezDochazky = 0;
+
   for (const k of konzultace) {
     if (k.t.zacatek.getTime() > Date.now()) continue;
+    if (k.t.stav !== "probehlo") {
+      bezDochazky += 1;
+      continue;
+    }
     const klic = k.t.predmet ?? "?";
-    odbyto.set(klic, (odbyto.get(klic) ?? 0) + 1);
+    odbyto.set(klic, (odbyto.get(klic) ?? 0) + naHodiny(k.t.delkaMinut));
   }
 
   return (
@@ -132,13 +142,22 @@ export default async function KartaKurzu({
           Konzultace
         </h2>
 
+        {bezDochazky > 0 ? (
+          <p className="mt-1 text-xs text-amber-600 dark:text-amber-400">
+            {bezDochazky === 1
+              ? "U jedné proběhlé konzultace chybí docházka."
+              : `U ${bezDochazky} proběhlých konzultací chybí docházka.`}{" "}
+            Dokud se nezapíše, hodiny se nezapočítávají.
+          </p>
+        ) : null}
+
         {predmety.length > 0 ? (
           <ul className="mt-1 grid gap-x-6 gap-y-0.5 sm:grid-cols-2">
             {predmety.map((p) => (
               <li key={p.klic} className="flex justify-between gap-3 text-sm">
                 <span>{p.nazev}</span>
                 <span className="tabular-nums text-neutral-500">
-                  {odbyto.get(p.klic) ?? 0} odbyto
+                  {odbyto.get(p.klic) ?? 0} h odbyto
                 </span>
               </li>
             ))}
@@ -169,6 +188,11 @@ export default async function KartaKurzu({
                   {predmety.find((p) => p.klic === k.t.predmet)?.nazev ?? "bez předmětu"}
                   {k.ucitel ? ` · ${k.ucitel.prijmeni}` : ""}
                 </span>
+                {k.t.zacatek.getTime() < Date.now() && k.t.stav !== "probehlo" ? (
+                  <span className="text-amber-600 dark:text-amber-400">
+                    {" · docházka nezapsaná"}
+                  </span>
+                ) : null}
               </li>
             ))}
           </ul>

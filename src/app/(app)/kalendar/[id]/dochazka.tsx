@@ -54,15 +54,18 @@ export default function Dochazka({
                   {r.jmeno} {r.prijmeni}
                 </span>
 
+                {/* Popisek je pořád stejný: co platí, říká zaškrtnutí.
+                    Prázdné políčko se slovem „nebyl“ se četlo jako tvrzení,
+                    že žák chyběl, i když se docházka teprve vyplňuje. */}
                 <span className="flex items-center gap-2">
                   <span
                     className={
                       je
                         ? "text-sm text-emerald-600 dark:text-emerald-400"
-                        : "text-sm text-neutral-400"
+                        : "text-sm text-neutral-500"
                     }
                   >
-                    {je ? "byl" : "nebyl"}
+                    zúčastnil se
                   </span>
                   <input
                     type="checkbox"
@@ -70,7 +73,7 @@ export default function Dochazka({
                     value={r.vycvikId}
                     checked={je}
                     onChange={() => prepni(r.vycvikId)}
-                    className="size-5"
+                    className="size-5 accent-emerald-600"
                   />
                 </span>
               </label>
@@ -89,8 +92,18 @@ export default function Dochazka({
           onClick={() => setPritomni(new Set(seznam.map((r) => r.vycvikId)))}
           className="text-sm text-neutral-500 underline-offset-4 hover:underline"
         >
-          Všichni byli
+          Zúčastnili se všichni
         </button>
+
+        {pritomni.size > 0 ? (
+          <button
+            type="button"
+            onClick={() => setPritomni(new Set())}
+            className="text-sm text-neutral-500 underline-offset-4 hover:underline"
+          >
+            Zrušit zaškrtnutí
+          </button>
+        ) : null}
 
         {stav.hotovo && !probiha ? (
           <span className="text-sm text-emerald-600 dark:text-emerald-400">Uloženo.</span>
@@ -101,8 +114,8 @@ export default function Dochazka({
       </div>
 
       <p className="mt-2 text-xs text-neutral-500">
-        Uložením se termín označí jako proběhlý. Změny docházky se zapisují do
-        historie.
+        Zaškrtnutí znamená účast. Uložením se termín označí jako proběhlý a
+        změny se zapíší do historie.
       </p>
     </form>
   );
