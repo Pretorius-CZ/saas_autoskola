@@ -24,7 +24,7 @@ export async function GET(
   const { id } = await params;
   const kdo = await vyzadujPrihlaseni();
 
-  const [zaznam] = await proAutoskolu(kdo.autoskola.id, (tx) =>
+  const [zaznam] = await proAutoskolu(kdo, (tx) =>
     tx
       .select({ v: vycviky, z: zaci })
       .from(vycviky)

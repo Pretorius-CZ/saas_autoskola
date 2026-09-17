@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 export default async function NovyZak() {
   const kdo = await vyzadujPrihlaseni();
 
-  const seznam = await proAutoskolu(kdo.autoskola.id, (tx) =>
+  const seznam = await proAutoskolu(kdo, (tx) =>
     tx
       .select({ id: ucitele.id, jmeno: ucitele.jmeno, prijmeni: ucitele.prijmeni })
       .from(ucitele)

@@ -28,7 +28,7 @@ function vychozi(): Hodnoty {
     ulice: "", mesto: "", psc: "", telefon: "", email: "",
     dokladTyp: "občanský průkaz", dokladCislo: "",
     skupina: "B", druh: "prvni", lekarskyPosudek: "", datumPodaniZadosti: dnesek(),
-    orpBydliste: "", ucitelId: "", ridicskyPrukazCislo: "",
+    orpBydliste: "", ucitelId: "", ridicskyPrukazCislo: "", evidencniCislo: "",
   };
 }
 
@@ -117,6 +117,8 @@ type Vlastnosti = {
   poznamka?: string;
   /** Kam vede odkaz „Zpět bez uložení". */
   zpetOdkaz?: string;
+  /** Ukázat pole s evidenčním číslem (jen při úpravě, ne při přijetí). */
+  sEvidencnimCislem?: boolean;
 };
 
 export default function FormularZaka({
@@ -129,6 +131,7 @@ export default function FormularZaka({
   popisPrubehu,
   poznamka,
   zpetOdkaz,
+  sEvidencnimCislem,
 }: Vlastnosti) {
   const [stav, akce, probiha] = useActionState<StavFormulare, FormData>(akceFormulare, {});
 
@@ -345,7 +348,24 @@ export default function FormularZaka({
           </select>
         </label>
 
-        <label className={`block ${sloupce[2]}`}>
+        {sEvidencnimCislem ? (
+          <Pole
+            klic="evidencniCislo"
+            popis="Evidenční číslo"
+            sirka={1}
+            inputMode="numeric"
+            hodnota={h.evidencniCislo}
+            zmen={zmen}
+            tridy={tridy}
+            pod={
+              <span className="mt-0.5 block text-xs text-neutral-500">
+                číslo v evidenční knize
+              </span>
+            }
+          />
+        ) : null}
+
+        <label className={`block ${sloupce[sEvidencnimCislem ? 1 : 2]}`}>
           <span className="text-xs text-neutral-500">Druh</span>
           <select
             name="druh"
@@ -490,7 +510,7 @@ export default function FormularZaka({
         <button
           type="submit"
           disabled={probiha}
-          className="rounded-md bg-neutral-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50 dark:bg-white dark:text-neutral-900"
+          className="tlacitko"
         >
           {probiha ? popisPrubehu : popisTlacitka}
         </button>

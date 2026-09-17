@@ -13,7 +13,7 @@ const PREDSTIH_DNI = 60;
 export default async function Prehled() {
   const kdo = await vyzadujPrihlaseni();
   // Obojí v jedné transakci — nastavení autoškoly platí jen uvnitř ní.
-  const { u, v } = await proAutoskolu(kdo.autoskola.id, async (tx) => {
+  const { u, v } = await proAutoskolu(kdo, async (tx) => {
     const u = await tx
       .select()
       .from(ucitele)

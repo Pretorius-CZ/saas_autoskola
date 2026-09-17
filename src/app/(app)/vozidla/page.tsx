@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 
 export default async function Vozidla() {
   const kdo = await vyzadujPrihlaseni();
-  const seznam = await proAutoskolu(kdo.autoskola.id, (tx) =>
+  const seznam = await proAutoskolu(kdo, (tx) =>
     tx
       .select()
       .from(vozidla)

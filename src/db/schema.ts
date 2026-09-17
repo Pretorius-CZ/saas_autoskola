@@ -4,7 +4,9 @@ import {
   integer,
   pgTable,
   text,
+  index,
   timestamp,
+  uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
 
@@ -30,6 +32,15 @@ export const tenants = pgTable("tenants", {
   psc: text("psc"),
   email: text("email"),
   telefon: text("telefon"),
+
+  // Vzhled: 'auto' | 'svetly' | 'tmavy' a barva 'seda' | 'modra' | 'zelena' | 'vinova'.
+  motiv: text("motiv").notNull().default("auto"),
+  barva: text("barva").notNull().default("seda"),
+
+  // Logo autoškoly. Malý obrázek uložený rovnou v databázi — je to jeden
+  // soubor na autoškolu, kvůli tomu nemá smysl zavádět úložiště navíc.
+  logoTyp: text("logo_typ"),
+  logoData: text("logo_data"),
 
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
@@ -217,55 +228,67 @@ export const zaci = pgTable("zaci", {
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
-export const vycviky = pgTable("vycviky", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  tenantId: uuid("tenant_id")
-    .notNull()
-    .references(() => tenants.id, { onDelete: "cascade" }),
-  zakId: uuid("zak_id")
-    .notNull()
-    .references(() => zaci.id, { onDelete: "cascade" }),
+export const vycviky = pgTable(
+  "vycviky",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "cascade" }),
+    zakId: uuid("zak_id")
+      .notNull()
+      .references(() => zaci.id, { onDelete: "cascade" }),
 
-  // Nepřetržitá řada všech výcviků autoškoly od jejího vzniku.
-  evidencniCislo: integer("evidencni_cislo").notNull(),
+    // Číslo řádku v evidenční knize. Řadu si vede autoškola — systém
+    // jen nabídne další v pořadí, přepsat ho jde v úpravě žáka.
+    evidencniCislo: integer("evidencni_cislo").notNull(),
 
-  skupina: text("skupina").notNull(),
-  // 'prvni' | 'rozsireni' | 'bodovy'  (bodový = přezkoušení podle § 45a)
-  druh: text("druh").notNull().default("prvni"),
+    skupina: text("skupina").notNull(),
+    // 'prvni' | 'rozsireni' | 'bodovy'  (bodový = přezkoušení podle § 45a)
+    druh: text("druh").notNull().default("prvni"),
 
-  // --- čtyři zákonné lhůty visí na těchto datech ---------------------
-  // § 13: lékařský posudek nesmí být při podání žádosti starší 3 měsíců
-  lekarskyPosudek: date("lekarsky_posudek"),
-  datumPodaniZadosti: date("datum_podani_zadosti"),
-  // § 13: od zahájení do ukončení výcviku nejvýš 18 měsíců
-  datumZahajeni: date("datum_zahajeni"),
-  datumUkonceni: date("datum_ukonceni"),
-  // § 32: do 15 dnů od ukončení výcviku podat přihlášku ke zkoušce
-  datumPrihlasky: date("datum_prihlasky"),
-  // § 39: od první zkoušky 12 měsíců na dokončení všech
-  datumPrvniZkousky: date("datum_prvni_zkousky"),
-  datumDokonceni: date("datum_dokonceni"),
+    // --- čtyři zákonné lhůty visí na těchto datech ---------------------
+    // § 13: lékařský posudek nesmí být při podání žádosti starší 3 měsíců
+    lekarskyPosudek: date("lekarsky_posudek"),
+    datumPodaniZadosti: date("datum_podani_zadosti"),
+    // § 13: od zahájení do ukončení výcviku nejvýš 18 měsíců
+    datumZahajeni: date("datum_zahajeni"),
+    datumUkonceni: date("datum_ukonceni"),
+    // § 32: do 15 dnů od ukončení výcviku podat přihlášku ke zkoušce
+    datumPrihlasky: date("datum_prihlasky"),
+    // § 39: od první zkoušky 12 měsíců na dokončení všech
+    datumPrvniZkousky: date("datum_prvni_zkousky"),
+    datumDokonceni: date("datum_dokonceni"),
 
-  // ORP příslušná podle bydliště žadatele — nemusí být stejná jako ta,
-  // u které je registrovaná autoškola.
-  orpBydliste: text("orp_bydliste"),
+    // ORP příslušná podle bydliště žadatele — nemusí být stejná jako ta,
+    // u které je registrovaná autoškola.
+    orpBydliste: text("orp_bydliste"),
 
-  // Vyplňuje se u rozšíření a přezkoušení: co už žadatel má.
-  ridicskyPrukazCislo: text("ridicsky_prukaz_cislo"),
-  // Skupiny oddělené čárkou, např. "B, B+E". Záměrně ne vlastní tabulka —
-  // je to údaj opsaný z průkazu, se kterým se dál nepočítá.
-  stavajiciSkupiny: text("stavajici_skupiny"),
+    // Vyplňuje se u rozšíření a přezkoušení: co už žadatel má.
+    ridicskyPrukazCislo: text("ridicsky_prukaz_cislo"),
+    // Skupiny oddělené čárkou, např. "B, B+E". Záměrně ne vlastní tabulka —
+    // je to údaj opsaný z průkazu, se kterým se dál nepočítá.
+    stavajiciSkupiny: text("stavajici_skupiny"),
 
-  ucitelId: uuid("ucitel_id").references(() => ucitele.id, { onDelete: "set null" }),
+    ucitelId: uuid("ucitel_id").references(() => ucitele.id, { onDelete: "set null" }),
 
-  // 'zadost' | 'vycvik' | 'ukonceno' | 'zkousky' | 'dokonceno' | 'zruseno'
-  stav: text("stav").notNull().default("zadost"),
+    // Kurz, ve kterém žák chodí na teorii. Jízdy jsou individuální.
+    kurzId: uuid("kurz_id"),
 
-  poznamka: text("poznamka"),
+    // 'zadost' | 'vycvik' | 'ukonceno' | 'zkousky' | 'dokonceno' | 'zruseno'
+    stav: text("stav").notNull().default("zadost"),
 
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
-});
+    poznamka: text("poznamka"),
+
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    // Dvě stejná evidenční čísla v jedné autoškole být nesmí — je to
+    // číslo řádku v evidenční knize. Hlídá to databáze, ne jen kód.
+    uniqueIndex("vycviky_evidencni_cislo_unikat").on(t.tenantId, t.evidencniCislo),
+  ],
+);
 
 /* ------------------------------------------------------------------ *
  * ČÍSELNÉ ŘADY
@@ -280,11 +303,158 @@ export const cisleniRady = pgTable("cisleni_rady", {
   tenantId: uuid("tenant_id")
     .primaryKey()
     .references(() => tenants.id, { onDelete: "cascade" }),
+  // Poslední přidělené číslo. Autoškola si ho nastaví podle své dosavadní
+  // knihy; další žák dostane tohle číslo + 1.
   posledniEvidencniCislo: integer("posledni_evidencni_cislo").notNull().default(0),
 });
 
 export type Zak = typeof zaci.$inferSelect;
 export type Vycvik = typeof vycviky.$inferSelect;
+
+/* ------------------------------------------------------------------ *
+ * KURZY
+ *
+ * Kurz je skupina žáků, která spolu chodí na teorii. Jízdy jsou vždycky
+ * individuální, ty ke kurzu nepatří.
+ * ------------------------------------------------------------------ */
+
+export const kurzy = pgTable("kurzy", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  tenantId: uuid("tenant_id")
+    .notNull()
+    .references(() => tenants.id, { onDelete: "cascade" }),
+
+  nazev: text("nazev").notNull(),
+  skupina: text("skupina").notNull().default("B"),
+  datumZahajeni: date("datum_zahajeni"),
+  poznamka: text("poznamka"),
+  aktivni: boolean("aktivni").notNull().default(true),
+
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+/* ------------------------------------------------------------------ *
+ * TERMÍNY
+ *
+ * Jeden zápis do časové osy. Teorie i jízda je tentýž druh záznamu,
+ * liší se jen tím, na co je navázaný:
+ *
+ *   teorie → kurz (skupina lidí)
+ *   jízda  → výcvik (jeden žák) + vozidlo
+ *
+ * Tohle je ta osa, ze které se pak dělají všechny čtyři zákonem
+ * požadované knihy. Nejsou to čtyři evidence, jsou to čtyři pohledy.
+ * ------------------------------------------------------------------ */
+
+export const terminy = pgTable(
+  "terminy",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "cascade" }),
+
+    // 'teorie' | 'jizda' | 'udrzba' | 'zdravotni'
+    druh: text("druh").notNull(),
+
+    zacatek: timestamp("zacatek", { withTimezone: true }).notNull(),
+    // Vyučovací hodina je 45 minut, běžný blok jízdy 90.
+    delkaMinut: integer("delka_minut").notNull().default(90),
+
+    ucitelId: uuid("ucitel_id").references(() => ucitele.id, { onDelete: "set null" }),
+    vozidloId: uuid("vozidlo_id").references(() => vozidla.id, { onDelete: "set null" }),
+
+    kurzId: uuid("kurz_id").references(() => kurzy.id, { onDelete: "cascade" }),
+    vycvikId: uuid("vycvik_id").references(() => vycviky.id, { onDelete: "cascade" }),
+
+    tema: text("tema"),
+    poznamka: text("poznamka"),
+    misto: text("misto"),
+
+    // 'planovano' | 'probehlo' | 'zruseno'
+    stav: text("stav").notNull().default("planovano"),
+
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    // Kalendář se ptá skoro vždycky "co je v tomhle týdnu" — index podle
+    // autoškoly a začátku je to, co tenhle dotaz potřebuje.
+    index("terminy_podle_zacatku").on(t.tenantId, t.zacatek),
+  ],
+);
+
+/* ------------------------------------------------------------------ *
+ * ÚČAST NA TEORII
+ *
+ * U jízdy je jasné, kdo tam byl — je navázaná na jeden výcvik.
+ * U teorie sedí v učebně skupina, a docházka se liší člověk od člověka.
+ * Tohle je ten rozdíl mezi "termín se konal" a "tenhle žák tam byl",
+ * a přesně na něm stojí třídní kniha.
+ * ------------------------------------------------------------------ */
+
+export const ucast = pgTable(
+  "ucast",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "cascade" }),
+
+    terminId: uuid("termin_id")
+      .notNull()
+      .references(() => terminy.id, { onDelete: "cascade" }),
+    vycvikId: uuid("vycvik_id")
+      .notNull()
+      .references(() => vycviky.id, { onDelete: "cascade" }),
+
+    pritomen: boolean("pritomen").notNull().default(false),
+    poznamka: text("poznamka"),
+
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("ucast_jednou").on(t.terminId, t.vycvikId),
+  ],
+);
+
+export type Kurz = typeof kurzy.$inferSelect;
+export type Termin = typeof terminy.$inferSelect;
+
+/* ------------------------------------------------------------------ *
+ * HISTORIE ZMĚN
+ *
+ * Každá změna v evidenci se sem zapíše sama — zajišťuje to pravidlo
+ * v databázi, ne můj kód. Rozdíl je zásadní: na pravidlo v databázi
+ * nejde zapomenout při psaní nové obrazovky.
+ *
+ * Tabulka je jen ke čtení a k přidávání. Úprava ani smazání řádku
+ * neprojde, brání tomu další pravidlo.
+ * ------------------------------------------------------------------ */
+
+export const zmeny = pgTable("zmeny", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  tenantId: uuid("tenant_id").notNull(),
+
+  kdy: timestamp("kdy", { withTimezone: true }).notNull().defaultNow(),
+
+  tabulka: text("tabulka").notNull(),
+  zaznamId: uuid("zaznam_id"),
+  // 'vznik' | 'zmena' | 'smazani'
+  akce: text("akce").notNull(),
+
+  pole: text("pole"),
+  hodnotaPred: text("hodnota_pred"),
+  hodnotaPo: text("hodnota_po"),
+
+  // Kdo změnu udělal. Doplní se z nastavení spojení; když chybí,
+  // zůstane prázdné — to je samo o sobě informace.
+  uzivatelId: text("uzivatel_id"),
+});
+
+export type Zmena = typeof zmeny.$inferSelect;
 
 export type Tenant = typeof tenants.$inferSelect;
 export type Uzivatel = typeof users.$inferSelect;

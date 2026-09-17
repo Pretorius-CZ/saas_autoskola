@@ -7,7 +7,9 @@ export const dynamic = "force-dynamic";
 
 const odkazy = [
   { href: "/", popis: "Přehled" },
+  { href: "/kalendar", popis: "Kalendář" },
   { href: "/zaci", popis: "Žáci" },
+  { href: "/kurzy", popis: "Kurzy" },
   { href: "/ucitele", popis: "Učitelé" },
   { href: "/vozidla", popis: "Vozidla" },
   { href: "/nastaveni", popis: "Nastavení" },
@@ -24,13 +26,23 @@ export default async function AppLayout({
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-6">
-      <header className="flex flex-wrap items-baseline justify-between gap-2 border-b border-neutral-200 pb-4 dark:border-neutral-800">
-        <div>
+      <header className="flex flex-wrap items-center justify-between gap-2 border-b border-neutral-200 pb-4 dark:border-neutral-800">
+        <div className="flex items-center gap-3">
+          {kdo.autoskola.logoData ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={`data:${kdo.autoskola.logoTyp};base64,${kdo.autoskola.logoData}`}
+              alt=""
+              className="max-h-10 w-auto"
+            />
+          ) : null}
+          <div>
           <p className="font-semibold">{kdo.autoskola.nazev}</p>
           <p className="text-sm text-neutral-500">
             {kdo.jmeno}
             {kdo.role === "spravce" ? " · správce" : null}
           </p>
+          </div>
         </div>
         <Odhlaseni />
       </header>

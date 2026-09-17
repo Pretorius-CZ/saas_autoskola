@@ -20,7 +20,7 @@ const STAVY: Record<string, string> = {
 export default async function Zaci() {
   const kdo = await vyzadujPrihlaseni();
 
-  const seznam = await proAutoskolu(kdo.autoskola.id, (tx) =>
+  const seznam = await proAutoskolu(kdo, (tx) =>
     tx
       .select({ v: vycviky, z: zaci })
       .from(vycviky)
@@ -35,7 +35,7 @@ export default async function Zaci() {
         <h1 className="text-lg font-semibold">Žáci</h1>
         <Link
           href="/zaci/novy"
-          className="rounded-lg bg-neutral-900 px-4 py-2 text-sm font-medium text-white dark:bg-white dark:text-neutral-900"
+          className="tlacitko"
         >
           Přijmout žáka
         </Link>

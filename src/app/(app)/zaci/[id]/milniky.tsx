@@ -24,20 +24,20 @@ export default function Milniky({ hodnoty }: { hodnoty: Hodnoty }) {
   const [stav, akce, probiha] = useActionState<StavUlozeni, FormData>(ulozMilniky, {});
 
   return (
-    <form action={akce} className="mt-4 space-y-4">
+    <form action={akce} className="mt-3 space-y-3">
       <input type="hidden" name="id" value={hodnoty.id} />
 
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-x-3 gap-y-2.5 sm:grid-cols-5">
         {POLE.map((p) => (
           <label key={p.klic} className="block">
-            <span className="text-sm text-neutral-500">{p.popis}</span>
+            <span className="text-xs text-neutral-500">{p.popis}</span>
             <input
               type="date"
               name={p.klic}
               defaultValue={hodnoty[p.klic] ?? ""}
-              className="mt-1 w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-base outline-none focus:border-neutral-500 dark:border-neutral-700 dark:bg-neutral-900"
+              className="mt-0.5 w-full rounded-md border border-neutral-300 bg-white px-2.5 py-1.5 text-sm outline-none focus:border-neutral-500 dark:border-neutral-700 dark:bg-neutral-900"
             />
-            <span className="mt-1 block text-xs text-neutral-500">{p.pozn}</span>
+            <span className="mt-0.5 block text-xs text-neutral-500">{p.pozn}</span>
           </label>
         ))}
       </div>
@@ -52,7 +52,7 @@ export default function Milniky({ hodnoty }: { hodnoty: Hodnoty }) {
         <button
           type="submit"
           disabled={probiha}
-          className="rounded-lg bg-neutral-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50 dark:bg-white dark:text-neutral-900"
+          className="tlacitko"
         >
           {probiha ? "Ukládám…" : "Uložit"}
         </button>

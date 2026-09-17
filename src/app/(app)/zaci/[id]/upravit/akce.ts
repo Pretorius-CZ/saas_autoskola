@@ -10,7 +10,7 @@ import { normalizujRodneCislo, overRodneCislo } from "@/lib/rodne-cislo";
 import { posudVek } from "@/lib/vek";
 import { dnesek } from "@/lib/datum";
 import { overTelefon } from "@/lib/telefon";
-import { sifrovaniFunguje, zasifruj } from "@/lib/sifrovani";
+import { desifruj, sifrovaniFunguje, zasifruj } from "@/lib/sifrovani";
 import type { StavFormulare } from "@/lib/typy-formulare";
 
 function vsechnyHodnoty(f: FormData): Record<string, string> {
@@ -82,6 +82,15 @@ export async function upravZaka(
     if (!t.ok) return chyba(t.duvod!, "telefon");
   }
 
+  // Evidenční číslo smí autoškola přepsat — je to její řada, ne naše.
+  const evidencniText = text(f, "evidencniCislo");
+  if (!evidencniText) return chyba("Evidenční číslo musí být vyplněné.", "evidencniCislo");
+
+  const evidencniCislo = Number(evidencniText.replace(/\s/g, ""));
+  if (!Number.isInteger(evidencniCislo) || evidencniCislo < 1) {
+    return chyba("Evidenční číslo musí být celé kladné číslo.", "evidencniCislo");
+  }
+
   const druh = text(f, "druh") ?? "prvni";
   const skupinyZPrukazu = f
     .getAll("stavajiciSkupiny")
@@ -98,7 +107,8 @@ export async function upravZaka(
     }
   }
 
-  await proAutoskolu(kdo.autoskola.id, async (tx) => {
+  try {
+    await proAutoskolu(kdo, async (tx) => {
     const [vycvik] = await tx
       .select({ zakId: vycviky.zakId })
       .from(vycviky)
@@ -106,6 +116,17 @@ export async function upravZaka(
       .limit(1);
 
     if (!vycvik) throw new Error("Výcvik nenalezen.");
+
+    // Rodné číslo přešifrujeme jen když se opravdu změnilo. Šifra je
+    // pokaždé jiná i pro stejnou hodnotu, takže bychom jinak do historie
+    // zapisovali změnu při každém uložení.
+    const [puvodni] = await tx
+      .select({ sifra: zaci.rodneCisloSifr })
+      .from(zaci)
+      .where(and(eq(zaci.id, vycvik.zakId), eq(zaci.tenantId, kdo.autoskola.id)))
+      .limit(1);
+
+    const rcBezeZmeny = desifruj(puvodni?.sifra ?? null) === rc;
 
     await tx
       .update(zaci)
@@ -117,8 +138,7 @@ export async function upravZaka(
         datumNarozeni,
         mistoNarozeni: text(f, "mistoNarozeni"),
         statniPrislusnost: text(f, "statniPrislusnost") ?? "ČR",
-        rodneCisloSifr: zasifruj(rc),
-        rodneCisloKonec: rc.slice(-4),
+        ...(rcBezeZmeny ? {} : { rodneCisloSifr: zasifruj(rc), rodneCisloKonec: rc.slice(-4) }),
         ulice: text(f, "ulice"),
         mesto: text(f, "mesto"),
         psc: text(f, "psc"),
@@ -133,6 +153,7 @@ export async function upravZaka(
     await tx
       .update(vycviky)
       .set({
+        evidencniCislo,
         skupina,
         druh,
         lekarskyPosudek: text(f, "lekarskyPosudek"),
@@ -144,7 +165,16 @@ export async function upravZaka(
         updatedAt: new Date(),
       })
       .where(and(eq(vycviky.id, id), eq(vycviky.tenantId, kdo.autoskola.id)));
-  });
+    });
+  } catch (e) {
+    // Jediná chyba, kterou tu čekáme, je obsazené evidenční číslo.
+    // Hlídá to databáze, takže ho nemohou dostat dva výcviky.
+    const zprava = e instanceof Error ? e.message : String(e);
+    if (zprava.includes("vycviky_evidencni_cislo_unikat")) {
+      return chyba(`Evidenční číslo ${evidencniCislo} už má jiný výcvik.`, "evidencniCislo");
+    }
+    throw e;
+  }
 
   revalidatePath(`/zaci/${id}`);
   revalidatePath("/zaci");
@@ -155,44 +185,3 @@ export async function upravZaka(
   redirect(`/zaci/${id}`);
 }
 
-/** Zrušení a obnovení výcviku. Záznam zůstává v evidenci. */
-export async function zmenZruseni(id: string, zrusit: boolean) {
-  const kdo = await vyzadujPrihlaseni();
-
-  await proAutoskolu(kdo.autoskola.id, async (tx) => {
-    if (zrusit) {
-      await tx
-        .update(vycviky)
-        .set({ stav: "zruseno", updatedAt: new Date() })
-        .where(and(eq(vycviky.id, id), eq(vycviky.tenantId, kdo.autoskola.id)));
-      return;
-    }
-
-    // Při obnovení se stav dopočítá z dat, stejně jako u milníků.
-    const [v] = await tx
-      .select()
-      .from(vycviky)
-      .where(and(eq(vycviky.id, id), eq(vycviky.tenantId, kdo.autoskola.id)))
-      .limit(1);
-    if (!v) return;
-
-    const stav = v.datumDokonceni
-      ? "dokonceno"
-      : v.datumPrvniZkousky || v.datumPrihlasky
-        ? "zkousky"
-        : v.datumUkonceni
-          ? "ukonceno"
-          : v.datumZahajeni
-            ? "vycvik"
-            : "zadost";
-
-    await tx
-      .update(vycviky)
-      .set({ stav, updatedAt: new Date() })
-      .where(and(eq(vycviky.id, id), eq(vycviky.tenantId, kdo.autoskola.id)));
-  });
-
-  revalidatePath(`/zaci/${id}`);
-  revalidatePath("/zaci");
-  revalidatePath("/");
-}

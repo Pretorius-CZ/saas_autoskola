@@ -109,7 +109,7 @@ export default function Prihlaseni() {
         <button
           type="submit"
           disabled={probiha}
-          className="w-full rounded-lg bg-neutral-900 px-3 py-2.5 text-base font-medium text-white disabled:opacity-50 dark:bg-white dark:text-neutral-900"
+          className="tlacitko w-full"
         >
           {probiha ? "Přihlašuji…" : "Přihlásit"}
         </button>

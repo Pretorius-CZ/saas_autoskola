@@ -18,7 +18,7 @@ export default async function UpravaZaka({
   const { id } = await params;
   const kdo = await vyzadujPrihlaseni();
 
-  const { zaznam, seznamUcitelu } = await proAutoskolu(kdo.autoskola.id, async (tx) => {
+  const { zaznam, seznamUcitelu } = await proAutoskolu(kdo, async (tx) => {
     const [zaznam] = await tx
       .select({ v: vycviky, z: zaci })
       .from(vycviky)
@@ -55,7 +55,7 @@ export default async function UpravaZaka({
         </span>
       </h1>
       <p className="mt-1 text-sm text-neutral-500">
-        Evidenční číslo se nemění — je to záznam v evidenční knize.
+        Evidenční číslo si vede autoškola podle své knihy — tady se dá přepsat.
       </p>
 
       <div className="mt-4">
@@ -86,6 +86,7 @@ export default async function UpravaZaka({
             orpBydliste: v.orpBydliste ?? "",
             ucitelId: v.ucitelId ?? "",
             ridicskyPrukazCislo: v.ridicskyPrukazCislo ?? "",
+            evidencniCislo: String(v.evidencniCislo),
           }}
           pocatecniSkupiny={
             v.stavajiciSkupiny
@@ -95,6 +96,7 @@ export default async function UpravaZaka({
           popisTlacitka="Uložit změny"
           popisPrubehu="Ukládám…"
           zpetOdkaz={`/zaci/${v.id}`}
+          sEvidencnimCislem
         />
       </div>
     </main>

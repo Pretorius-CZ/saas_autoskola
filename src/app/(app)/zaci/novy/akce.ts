@@ -100,7 +100,7 @@ export async function prijmiZaka(
     );
   }
 
-  const idVycviku = await proAutoskolu(kdo.autoskola.id, async (tx) => {
+  const idVycviku = await proAutoskolu(kdo, async (tx) => {
     // Evidenční číslo: jeden zápis, který se zamkne, takže dva současné
     // příjmy nedostanou stejné číslo a řada zůstane nepřetržitá.
     const { rows } = (await tx.execute(sql`

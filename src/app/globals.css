@@ -1,26 +1,93 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+/*
+ * Motiv (světlý / tmavý / podle systému) a barva se nastavují v aplikaci
+ * a jsou uložené u autoškoly. Na <html> se pak objeví jako data-motiv
+ * a data-barva.
+ *
+ * Tímhle přepisujeme, kdy platí tailwindovské "dark:" — nově podle
+ * nastavení, a jen u volby "auto" podle systému.
+ */
+@custom-variant dark {
+  &:where([data-motiv="tmavy"], [data-motiv="tmavy"] *) {
+    @slot;
+  }
+  @media (prefers-color-scheme: dark) {
+    &:where([data-motiv="auto"], [data-motiv="auto"] *) {
+      @slot;
+    }
   }
 }
 
+/* Výchozí barva: šedá, tedy skoro černá na světlém a skoro bílá na tmavém. */
+:root {
+  --akcent: #171717;
+  --akcent-text: #ffffff;
+}
+
+[data-motiv="tmavy"] {
+  --akcent: #fafafa;
+  --akcent-text: #171717;
+}
+
+@media (prefers-color-scheme: dark) {
+  [data-motiv="auto"] {
+    --akcent: #fafafa;
+    --akcent-text: #171717;
+  }
+}
+
+/* Barevné volby platí v obou motivech stejně — jsou voleny tak, aby byly
+   čitelné na světlém i tmavém pozadí. Musí být až za pravidly pro motiv. */
+[data-barva="modra"] {
+  --akcent: #2563eb;
+  --akcent-text: #ffffff;
+}
+
+[data-barva="zelena"] {
+  --akcent: #15803d;
+  --akcent-text: #ffffff;
+}
+
+[data-barva="vinova"] {
+  --akcent: #9f1239;
+  --akcent-text: #ffffff;
+}
+
 body {
-  background: var(--background);
-  color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+}
+
+/*
+ * Tlačítka a vstupy mají vlastní třídy, ne rozepsané barvy u každého
+ * výskytu. Kdyby byly rozepsané, změna barvy by znamenala projít deset
+ * souborů — a na jeden by se zapomnělo.
+ */
+.tlacitko {
+  background: var(--akcent);
+  color: var(--akcent-text);
+  border-radius: 0.375rem;
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1.25rem;
+}
+
+.tlacitko:disabled {
+  opacity: 0.5;
+}
+
+.tlacitko-vedlejsi {
+  border: 1px solid;
+  border-color: color-mix(in oklab, var(--akcent) 35%, transparent);
+  color: inherit;
+  border-radius: 0.375rem;
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1.25rem;
+}
+
+.odkaz-akcent {
+  color: var(--akcent);
 }

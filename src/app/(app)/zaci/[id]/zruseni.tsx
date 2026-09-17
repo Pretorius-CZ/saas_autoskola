@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { zmenZruseni } from "./upravit/akce";
+import { zmenZruseni } from "./akce-vycvik";
 
 /**
  * Zrušení výcviku, ne smazání.

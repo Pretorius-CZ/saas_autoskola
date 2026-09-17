@@ -194,6 +194,25 @@ ne náhrada za pečlivost.
 `TABULKY` v `src/db/rls.ts` a spusť `npm run db:rls`. Jinak zůstane
 nechráněná a nic tě na to neupozorní.
 
+## Past, na kterou jsem naletěl dvakrát
+
+**Formulář po odeslání přijde o obsah.** React formulář po doběhnutí akce
+vyprázdní: textová pole se vrátí na `defaultValue` a rozbalovací seznamy
+na první položku. Když akce skončí chybou, uživatel přijde o všechno, co
+napsal — a u formuláře o dvaceti polích ho to naučí bát se tlačítka.
+
+**Řešení, které v projektu používáme:** formulář si drží hodnoty ve vlastním
+stavu (`useState`), akce při chybě vrací zpátky `hodnoty` i `pole`, formulář
+podle toho hodnoty obnoví a chybné pole zvýrazní červeně.
+
+Platí to pro **každý** nový formulář. Stalo se to u přijetí žáka a pak
+znovu u plánování termínu.
+
+**Druhá polovina té samé pasti:** komponentu pro políčko nikdy nedefinuj
+uvnitř komponenty formuláře. React ji při každém stisku klávesy považuje
+za nový prvek, políčko zahodí a kurzor zmizí — dá se napsat vždycky jen
+jeden znak.
+
 ## Zálohy
 
 ```powershell
@@ -264,6 +283,43 @@ Před prvním skutečným žákem ho zapni.
 **Věkové meze** jsou v `src/lib/vek.ts`. Počítá se s nejnižší zákonnou
 cestou: B jako 17 (kvůli B17), A jako 20 (po dvou letech s A2). Výcvik smí
 začít 18 měsíců před dosažením věku.
+
+## Připomínky z provozu (17. 9. 2026)
+
+Michalovy body po proklikání. Zatím nezapracované, pořadí není dané.
+
+**1. Historie změn — kdo, kdy, co přepsal. ROZHODNUTO: u VŠEHO.**
+Michal (zkušební komisař): historie se vede ve veškeré evidenci a každá
+změna se musí zaznamenat. Není to tedy volba podle citlivosti údaje —
+platí to plošně.
+
+Dnes `update` starou hodnotu prostě přepíše a je pryč. Chce to tabulku změn
+(datum, uživatel, tabulka, záznam, pole, původní hodnota, nová hodnota),
+na kartě tlačítko „Zobrazit změny" a tisk. Zápis nesmí jít obejít
+zapomenutím — musí být na jednom místě, kudy procházejí všechny úpravy,
+ne dopsaný do každé akce zvlášť.
+
+Souvisí to s dřívějším rozhodnutím „jen přidávat, nikdy nepřepisovat" —
+tohle je jeho první skutečné použití.
+
+**2. Vzhled: motivy a logo.**
+Světlý, tmavý, barevné varianty. Možnost nahrát logo autoškoly. Až na konec —
+ale u vlastního loga myslet na to, že se bude hodit i do tištěných sestav.
+
+**3. Lhůty na kartě žáka jsou moc velké.** (odsouhlaseno)
+Čtyři odstavce s paragrafy zabírají půl obrazovky. Nahradit stručným
+hlídáním: zahájený výcvik, ukončený výcvik, a po první zkoušce jen
+odpočet — „na dokončení zkoušek zbývá 87 dní", a to jen když se to blíží.
+Paragrafy nechat někde stranou, ne na ráně.
+
+**4. Evidenční číslo si má určit autoškola.**
+Každá má vlastní řadu, takže začínat od jedničky je špatně. První číslo
+zadá autoškola a další se od něj odvozují. Nejspíš jako pole v „Upravit",
+plus někde v nastavení počáteční hodnota řady.
+
+**5. Karta žáka: rozvržení jako formulář úpravy.**
+Stejná mřížka, stejná hustota. Teď je karta rozvolněná a úprava hutná,
+což působí jako dvě různé aplikace.
 
 ## Co zbývá
 

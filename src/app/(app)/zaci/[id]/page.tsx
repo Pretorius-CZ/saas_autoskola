@@ -6,9 +6,9 @@ import { ucitele, vycviky, zaci } from "@/db/schema";
 import { vyzadujPrihlaseni } from "@/lib/relace";
 import { formatDatum, vekKDatu } from "@/lib/datum";
 import { formatTelefon } from "@/lib/telefon";
-import { spocitejLhuty, type StavLhuty } from "@/lib/lhuty";
+import { hlidani } from "@/lib/hlidani";
 import { desifruj } from "@/lib/sifrovani";
-import Milniky from "./milniky";
+import Prubeh from "./prubeh";
 import Zruseni from "./zruseni";
 
 export const dynamic = "force-dynamic";
@@ -28,26 +28,32 @@ const DRUHY: Record<string, string> = {
   bodovy: "přezkoušení (bodový)",
 };
 
-function barva(stav: StavLhuty) {
-  switch (stav) {
-    case "propadlo":
-      return "bg-red-500";
-    case "blizi_se":
-      return "bg-amber-500";
-    case "splneno":
-      return "bg-emerald-500";
-    case "bezi":
-      return "bg-neutral-400";
-    default:
-      return "bg-neutral-300 dark:bg-neutral-700";
-  }
+/** Jeden údaj v hutné mřížce — stejná hustota jako ve formuláři úpravy. */
+function Udaj({
+  popis,
+  hodnota,
+  sirka = 2,
+}: {
+  popis: string;
+  hodnota: React.ReactNode;
+  sirka?: number;
+}) {
+  return (
+    <div className={sloupce[sirka]}>
+      <p className="text-xs text-neutral-500">{popis}</p>
+      <p className="text-sm">{hodnota || <span className="text-neutral-400">—</span>}</p>
+    </div>
+  );
 }
 
-function Radek({ popis, hodnota }: { popis: string; hodnota: React.ReactNode }) {
+function Predel({ popis, vpravo }: { popis: string; vpravo?: React.ReactNode }) {
   return (
-    <div className="flex justify-between gap-4 py-1.5 sm:block sm:py-0">
-      <dt className="text-sm text-neutral-500">{popis}</dt>
-      <dd className="text-right sm:text-left">{hodnota ?? "—"}</dd>
+    <div className="col-span-full mt-2 flex items-center gap-3 first:mt-0">
+      <span className="text-xs font-medium uppercase tracking-wide text-neutral-400">
+        {popis}
+      </span>
+      <span className="h-px flex-1 bg-neutral-200 dark:bg-neutral-800" />
+      {vpravo}
     </div>
   );
 }
@@ -60,7 +66,7 @@ export default async function KartaZaka({
   const { id } = await params;
   const kdo = await vyzadujPrihlaseni();
 
-  const [zaznam] = await proAutoskolu(kdo.autoskola.id, (tx) =>
+  const [zaznam] = await proAutoskolu(kdo, (tx) =>
     tx
       .select({ v: vycviky, z: zaci, u: ucitele })
       .from(vycviky)
@@ -73,105 +79,100 @@ export default async function KartaZaka({
   if (!zaznam) notFound();
 
   const { v, z, u } = zaznam;
-  const lhuty = spocitejLhuty(v);
+  const upozorneni = hlidani(v);
 
-  // Zákonného zástupce neevidujeme — jen připomínáme, že podpis je potřeba.
+  // Rodné číslo se rozšifruje až tady, pro zobrazení.
+  const rodneCislo = desifruj(z.rodneCisloSifr);
+
   const vekPriPodani = v.datumPodaniZadosti
     ? vekKDatu(z.datumNarozeni, v.datumPodaniZadosti)
     : null;
 
-  // Rodné číslo se rozšifruje až tady, pro zobrazení. V databázi ani
-  // v odpovědi ze seznamu nikde v čitelné podobě není.
-  const rodneCislo = desifruj(z.rodneCisloSifr);
-
   return (
-    <main className="space-y-8">
+    <main className="space-y-4">
       <div>
-        <Link href="/zaci" className="text-sm text-neutral-500 underline-offset-4 hover:underline">
+        <Link href="/zaci" className="text-xs text-neutral-500 underline-offset-4 hover:underline">
           ← Žáci
         </Link>
-        <h1 className="mt-2 text-lg font-semibold">
-          <span className="tabular-nums text-neutral-500">{v.evidencniCislo}</span>{" "}
-          {z.titul ? `${z.titul} ` : ""}
-          {z.jmeno} {z.prijmeni}
-        </h1>
-        <p className="mt-1 text-sm text-neutral-500">
-          skupina {v.skupina} · {DRUHY[v.druh] ?? v.druh} · {STAVY[v.stav] ?? v.stav}
-        </p>
 
-        <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2">
+        <div className="mt-1 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+          <h1 className="text-lg font-semibold">
+            <span className="tabular-nums text-neutral-500">{v.evidencniCislo}</span>{" "}
+            {z.titul ? `${z.titul} ` : ""}
+            {z.jmeno} {z.prijmeni}
+          </h1>
+          <p className="text-sm text-neutral-500">
+            skupina {v.skupina} · {DRUHY[v.druh] ?? v.druh} · {STAVY[v.stav] ?? v.stav}
+          </p>
+        </div>
+
+        <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-2">
           <a
             href={`/zaci/${v.id}/zadost`}
             target="_blank"
             rel="noopener"
-            className="rounded-md bg-neutral-900 px-3 py-1.5 text-sm font-medium text-white dark:bg-white dark:text-neutral-900"
+            className="tlacitko"
           >
             Tisk žádosti
           </a>
           <Link
             href={`/zaci/${v.id}/upravit`}
-            className="rounded-md border border-neutral-300 px-3 py-1.5 text-sm font-medium dark:border-neutral-700"
+            className="tlacitko-vedlejsi"
           >
             Upravit
           </Link>
+          <Link
+            href={`/zaci/${v.id}/zmeny`}
+            className="text-sm text-neutral-500 underline-offset-4 hover:underline"
+          >
+            Historie změn
+          </Link>
           <Zruseni id={v.id} zruseno={v.stav === "zruseno"} />
         </div>
-
-        {v.stav === "zruseno" ? (
-          <p className="mt-3 rounded-md bg-neutral-100 px-3 py-2 text-sm text-neutral-600 dark:bg-neutral-900 dark:text-neutral-400">
-            Výcvik je zrušený. Záznam zůstává v evidenci, evidenční číslo se
-            nikomu jinému nepřidělí.
-          </p>
-        ) : null}
       </div>
 
+      {v.stav === "zruseno" ? (
+        <p className="rounded-md bg-neutral-100 px-3 py-2 text-sm text-neutral-600 dark:bg-neutral-900 dark:text-neutral-400">
+          Výcvik je zrušený. Záznam zůstává v evidenci, evidenční číslo se nikomu
+          jinému nepřidělí.
+        </p>
+      ) : null}
+
+      {upozorneni.length > 0 ? (
+        <ul className="space-y-1">
+          {upozorneni.map((uz) => (
+            <li
+              key={uz.klic}
+              title={uz.paragraf}
+              className={
+                uz.naléhavost === "propadlo"
+                  ? "rounded-md bg-red-50 px-3 py-1.5 text-sm font-medium text-red-700 dark:bg-red-950 dark:text-red-300"
+                  : uz.naléhavost === "blizi_se"
+                    ? "rounded-md bg-amber-50 px-3 py-1.5 text-sm text-amber-800 dark:bg-amber-950 dark:text-amber-200"
+                    : "px-3 py-1.5 text-sm text-neutral-500"
+              }
+            >
+              {uz.text}
+            </li>
+          ))}
+        </ul>
+      ) : null}
+
       {vekPriPodani !== null && vekPriPodani < 18 ? (
-        <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:bg-amber-950 dark:text-amber-200">
+        <p className="rounded-md bg-amber-50 px-3 py-1.5 text-sm text-amber-800 dark:bg-amber-950 dark:text-amber-200">
           Při podání žádosti bylo žadateli {vekPriPodani} let — na žádosti musí být
           podpis zákonného zástupce
           {vekPriPodani < 15 ? ", a to úředně ověřený" : ""}.
         </p>
       ) : null}
 
-      <section>
-        <h2 className="text-sm font-medium text-neutral-500">Zákonné lhůty</h2>
-        <ul className="mt-2 divide-y divide-neutral-200 dark:divide-neutral-800">
-          {lhuty.map((l) => (
-            <li key={l.klic} className="flex items-baseline gap-3 py-3">
-              <span className={`mt-1.5 size-2 shrink-0 rounded-full ${barva(l.stav)}`} />
-              <div className="min-w-0 flex-1">
-                <p className="flex flex-wrap items-baseline justify-between gap-x-3">
-                  <span className="font-medium">
-                    {l.nazev}{" "}
-                    <span className="text-sm font-normal text-neutral-400">{l.paragraf}</span>
-                  </span>
-                  <span
-                    className={
-                      l.stav === "propadlo"
-                        ? "text-sm font-medium text-red-600 dark:text-red-400"
-                        : l.stav === "blizi_se"
-                          ? "text-sm text-amber-600 dark:text-amber-400"
-                          : "text-sm text-neutral-500"
-                    }
-                  >
-                    {l.detail}
-                  </span>
-                </p>
-                <p className="text-sm text-neutral-500">{l.popis}</p>
-              </div>
-            </li>
-          ))}
-        </ul>
-      </section>
+      <div className="grid grid-cols-1 gap-x-3 gap-y-2.5 sm:grid-cols-6">
+        <Predel popis="Průběh" />
 
-      <section>
-        <h2 className="text-sm font-medium text-neutral-500">Průběh</h2>
-        <p className="mt-1 text-sm text-neutral-500">
-          Stav výcviku se nenastavuje ručně — vyplývá z dat níž.
-        </p>
-        <Milniky
-          hodnoty={{
-            id: v.id,
+        <Prubeh
+          id={v.id}
+          podani={v.datumPodaniZadosti}
+          pocatecni={{
             datumZahajeni: v.datumZahajeni,
             datumUkonceni: v.datumUkonceni,
             datumPrihlasky: v.datumPrihlasky,
@@ -179,67 +180,75 @@ export default async function KartaZaka({
             datumDokonceni: v.datumDokonceni,
           }}
         />
-      </section>
 
-      <section>
-        <h2 className="text-sm font-medium text-neutral-500">Žadatel</h2>
-        <dl className="mt-2 grid gap-x-8 gap-y-3 sm:grid-cols-2">
-          <Radek popis="Datum narození" hodnota={formatDatum(z.datumNarozeni)} />
-          <Radek popis="Místo narození" hodnota={z.mistoNarozeni} />
-          <Radek
-            popis="Rodné číslo"
-            hodnota={
-              rodneCislo ? (
-                <span className="tabular-nums">{rodneCislo}</span>
-              ) : z.rodneCisloKonec ? (
-                <span className="text-neutral-400">… {z.rodneCisloKonec} (nelze rozšifrovat)</span>
-              ) : null
-            }
-          />
-          <Radek popis="Státní příslušnost" hodnota={z.statniPrislusnost} />
-          <Radek popis="Rodné příjmení" hodnota={z.rodnePrijmeni} />
-          <Radek
-            popis="Doklad totožnosti"
-            hodnota={z.dokladCislo ? `${z.dokladTyp ?? ""} ${z.dokladCislo}`.trim() : null}
-          />
-          <Radek
-            popis="Adresa"
-            hodnota={
-              z.ulice || z.mesto
-                ? [z.ulice, [z.psc, z.mesto].filter(Boolean).join(" ")]
-                    .filter(Boolean)
-                    .join(", ")
-                : null
-            }
-          />
-          <Radek
-            popis="Kontakt"
-            hodnota={
-              [z.telefon ? formatTelefon(z.telefon) : null, z.email]
-                .filter(Boolean)
-                .join(" · ") || null
-            }
-          />
-        </dl>
-      </section>
+        <Predel popis="Žadatel" />
 
-      <section>
-        <h2 className="text-sm font-medium text-neutral-500">Výcvik</h2>
-        <dl className="mt-2 grid gap-x-8 gap-y-3 sm:grid-cols-2">
-          <Radek popis="Evidenční číslo" hodnota={<span className="tabular-nums">{v.evidencniCislo}</span>} />
-          <Radek popis="Učitel" hodnota={u ? `${u.jmeno} ${u.prijmeni}` : null} />
-          <Radek popis="Lékařský posudek" hodnota={formatDatum(v.lekarskyPosudek)} />
-          <Radek popis="Podání žádosti" hodnota={formatDatum(v.datumPodaniZadosti)} />
-          <Radek popis="Úřad podle bydliště" hodnota={v.orpBydliste} />
-          <Radek popis="Úřad autoškoly" hodnota={kdo.autoskola.orpPodani} />
-          {v.ridicskyPrukazCislo || v.stavajiciSkupiny ? (
-            <>
-              <Radek popis="Řidičský průkaz" hodnota={v.ridicskyPrukazCislo} />
-              <Radek popis="Stávající skupiny" hodnota={v.stavajiciSkupiny} />
-            </>
-          ) : null}
-        </dl>
-      </section>
+        <Udaj popis="Datum narození" hodnota={formatDatum(z.datumNarozeni)} />
+        <Udaj popis="Místo narození" hodnota={z.mistoNarozeni} sirka={1} />
+        <Udaj
+          popis="Rodné číslo"
+          hodnota={
+            rodneCislo ? (
+              <span className="tabular-nums">{rodneCislo}</span>
+            ) : z.rodneCisloKonec ? (
+              <span className="text-neutral-400">… {z.rodneCisloKonec}</span>
+            ) : null
+          }
+        />
+        <Udaj popis="Občanství" hodnota={z.statniPrislusnost} sirka={1} />
+
+        <Udaj
+          popis="Doklad totožnosti"
+          hodnota={z.dokladCislo ? `${z.dokladTyp ?? ""} ${z.dokladCislo}`.trim() : null}
+          sirka={3}
+        />
+        <Udaj popis="Rodné příjmení" hodnota={z.rodnePrijmeni} sirka={3} />
+
+        <Udaj
+          popis="Adresa"
+          hodnota={
+            z.ulice || z.mesto
+              ? [z.ulice, [z.psc, z.mesto].filter(Boolean).join(" ")].filter(Boolean).join(", ")
+              : null
+          }
+          sirka={4}
+        />
+        <Udaj
+          popis="Kontakt"
+          hodnota={
+            [z.telefon ? formatTelefon(z.telefon) : null, z.email].filter(Boolean).join(" · ") ||
+            null
+          }
+          sirka={2}
+        />
+
+        <Predel popis="Výcvik" />
+
+        <Udaj popis="Lékařský posudek" hodnota={formatDatum(v.lekarskyPosudek)} sirka={1} />
+        <Udaj popis="Učitel" hodnota={u ? `${u.jmeno} ${u.prijmeni}` : null} />
+        <Udaj popis="Úřad podle bydliště" hodnota={v.orpBydliste} />
+        <Udaj popis="Úřad autoškoly" hodnota={kdo.autoskola.orpPodani} sirka={1} />
+
+        {v.ridicskyPrukazCislo || v.stavajiciSkupiny ? (
+          <>
+            <Udaj popis="Řidičský průkaz" hodnota={v.ridicskyPrukazCislo} />
+            <Udaj popis="Stávající skupiny" hodnota={v.stavajiciSkupiny} sirka={4} />
+          </>
+        ) : null}
+      </div>
+
     </main>
   );
 }
+
+/**
+ * Šířky sloupců vypsané naplno — Tailwind hledá názvy tříd v textu souboru,
+ * takže skládat je za běhu nefunguje.
+ */
+const sloupce: Record<number, string> = {
+  1: "sm:col-span-1",
+  2: "sm:col-span-2",
+  3: "sm:col-span-3",
+  4: "sm:col-span-4",
+  6: "sm:col-span-6",
+};

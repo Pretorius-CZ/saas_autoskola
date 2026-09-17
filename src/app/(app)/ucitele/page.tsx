@@ -33,7 +33,7 @@ export default async function Ucitele() {
   const kdo = await vyzadujPrihlaseni();
   // Podmínku na autoškolu píšeme dál, i když ji databáze hlídá sama.
   // Dva zámky na jedněch dveřích jsou levné; chybějící zámek ne.
-  const seznam = await proAutoskolu(kdo.autoskola.id, (tx) =>
+  const seznam = await proAutoskolu(kdo, (tx) =>
     tx
       .select()
       .from(ucitele)
