@@ -32,6 +32,23 @@ function vychozi(): Hodnoty {
   };
 }
 
+/**
+ * Sloučí předvyplněné hodnoty s výchozími.
+ *
+ * Klíč, který má `undefined`, se zahodí. Prostý `{...vychozi(), ...pocatecni}`
+ * by ho totiž přepsal na `undefined` a Reactu by se pole přepnulo z řízeného
+ * na neřízené — což se projeví až za běhu a špatně se to hledá.
+ */
+function slouc(pocatecni?: Partial<HodnotyZaka>): Hodnoty {
+  const h = vychozi();
+  if (!pocatecni) return h;
+
+  for (const [klic, hodnota] of Object.entries(pocatecni)) {
+    if (typeof hodnota === "string") h[klic] = hodnota;
+  }
+  return h;
+}
+
 const vstup =
   "w-full rounded-md border bg-white px-2.5 py-1.5 text-sm outline-none dark:bg-neutral-900";
 const bezny = "border-neutral-300 focus:border-neutral-500 dark:border-neutral-700";
@@ -139,7 +156,7 @@ export default function FormularZaka({
    * Formulář si drží hodnoty sám: React po odeslání políčka vyprázdní
    * a rozbalovací seznamy by spadly na výchozí hodnotu.
    */
-  const [h, setH] = useState<Hodnoty>(() => ({ ...vychozi(), ...pocatecni }));
+  const [h, setH] = useState<Hodnoty>(() => slouc(pocatecni));
   const [doplnenoSamo, setDoplnenoSamo] = useState(false);
   const [napovedaData, setNapovedaData] = useState<string | null>(null);
   const [skupinyZPrukazu, setSkupinyZPrukazu] = useState<string[]>(pocatecniSkupiny ?? []);
