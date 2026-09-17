@@ -16,6 +16,8 @@ import { formatTelefon } from "@/lib/telefon";
  * Co se ZÁMĚRNĚ nevyplňuje:
  *   - čestné prohlášení (místo a datum) — vypisuje se rukou při podpisu
  *   - souhlas zákonného zástupce
+ *   - CELÁ spodní část "vyplňuje provozovatel autoškoly" — data i evidenční
+ *     číslo si autoškola dopisuje ručně, každá má vlastní číselnou řadu
  *   - razítka a podpisy
  *   - část pro vstupní školení u skupin C a D
  * Podpis žadatele a pod ním podpis zákonného zástupce se dělají najednou
@@ -54,10 +56,6 @@ const POLE = {
   adresa:           { x: 120, yShora: 207.9, sirka: 296 },
   psc:              { x: 421, yShora: 207.9, sirka: 83 },
   orpBydliste:      { x: 328, yShora: 228.6, sirka: 177 },
-  datumPodani:      { x: 152, yShora: 638.7, sirka: 92 },
-  datumZahajeni:    { x: 425, yShora: 638.7, sirka: 108 },
-  evidencniCislo:   { x: 428, yShora: 680.0, sirka: 105 },
-  datumUkonceni:    { x: 335, yShora: 700.6, sirka: 88 },
 } as const;
 
 type Klic = keyof typeof POLE;
@@ -79,10 +77,6 @@ export type UdajeZadosti = {
   mesto: string | null;
   psc: string | null;
   orpBydliste: string | null;
-  datumPodani: string | null;
-  datumZahajeni: string | null;
-  datumUkonceni: string | null;
-  evidencniCislo: number;
 };
 
 function slozAdresu(u: UdajeZadosti): string | null {
@@ -142,11 +136,6 @@ export async function vyplnZadost(u: UdajeZadosti): Promise<Uint8Array> {
   // Čestné prohlášení (místo a datum) schválně NEVYPLŇUJEME.
   // Žadatel ho vypisuje rukou ve chvíli, kdy se pod něj podepisuje —
   // předtištěné datum by z prohlášení dělalo formalitu.
-
-  napis("datumPodani", u.datumPodani ? formatDatum(u.datumPodani) : null);
-  napis("datumZahajeni", u.datumZahajeni ? formatDatum(u.datumZahajeni) : null);
-  napis("datumUkonceni", u.datumUkonceni ? formatDatum(u.datumUkonceni) : null);
-  napis("evidencniCislo", String(u.evidencniCislo));
 
   return doc.save();
 }

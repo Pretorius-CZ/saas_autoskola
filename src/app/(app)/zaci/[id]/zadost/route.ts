@@ -62,10 +62,6 @@ export async function GET(
     mesto: z.mesto,
     psc: z.psc,
     orpBydliste: v.orpBydliste,
-    datumPodani: v.datumPodaniZadosti,
-    datumZahajeni: v.datumZahajeni,
-    datumUkonceni: v.datumUkonceni,
-    evidencniCislo: v.evidencniCislo,
   });
 
   const nazev = `zadost-${v.evidencniCislo}-${bezpecnyNazev(z.prijmeni)}.pdf`;
