@@ -2,7 +2,12 @@ import { withSentryConfig } from "@sentry/nextjs";
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  // Úřední tiskopis a písmo se načítají za běhu ze souborů. Bez tohohle
+  // řádku by je Vercel do nasazení nepřibalil a tisk žádosti by fungoval
+  // jen na tvém počítači.
+  outputFileTracingIncludes: {
+    "/zaci/**": ["./src/tiskopisy/**"],
+  },
 };
 
 export default withSentryConfig(nextConfig, {

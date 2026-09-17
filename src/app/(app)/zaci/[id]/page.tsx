@@ -97,6 +97,20 @@ export default async function KartaZaka({
         <p className="mt-1 text-sm text-neutral-500">
           skupina {v.skupina} · {DRUHY[v.druh] ?? v.druh} · {STAVY[v.stav] ?? v.stav}
         </p>
+
+        <div className="mt-3">
+          <a
+            href={`/zaci/${v.id}/zadost`}
+            target="_blank"
+            rel="noopener"
+            className="inline-block rounded-md bg-neutral-900 px-3 py-1.5 text-sm font-medium text-white dark:bg-white dark:text-neutral-900"
+          >
+            Tisk žádosti
+          </a>
+          <span className="ml-3 text-xs text-neutral-500">
+            úřední tiskopis s vyplněnými údaji
+          </span>
+        </div>
       </div>
 
       {vekPriPodani !== null && vekPriPodani < 18 ? (
