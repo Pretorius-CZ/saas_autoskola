@@ -2,7 +2,8 @@ import { and, asc, eq } from "drizzle-orm";
 import { proAutoskolu } from "@/lib/db-tenant";
 import { ucitele } from "@/db/schema";
 import { vyzadujPrihlaseni } from "@/lib/relace";
-import FormularPrijeti from "./formular";
+import FormularZaka from "@/components/formular-zaka";
+import { prijmiZaka } from "./akce";
 
 export const dynamic = "force-dynamic";
 
@@ -25,7 +26,13 @@ export default async function NovyZak() {
       </p>
 
       <div className="mt-4">
-        <FormularPrijeti ucitele={seznam} />
+        <FormularZaka
+          ucitele={seznam}
+          akceFormulare={prijmiZaka}
+          popisTlacitka="Přijmout žáka"
+          popisPrubehu="Zakládám…"
+          poznamka="Evidenční číslo přidělí systém sám."
+        />
       </div>
     </main>
   );

@@ -9,6 +9,7 @@ import { formatTelefon } from "@/lib/telefon";
 import { spocitejLhuty, type StavLhuty } from "@/lib/lhuty";
 import { desifruj } from "@/lib/sifrovani";
 import Milniky from "./milniky";
+import Zruseni from "./zruseni";
 
 export const dynamic = "force-dynamic";
 
@@ -98,19 +99,30 @@ export default async function KartaZaka({
           skupina {v.skupina} · {DRUHY[v.druh] ?? v.druh} · {STAVY[v.stav] ?? v.stav}
         </p>
 
-        <div className="mt-3">
+        <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2">
           <a
             href={`/zaci/${v.id}/zadost`}
             target="_blank"
             rel="noopener"
-            className="inline-block rounded-md bg-neutral-900 px-3 py-1.5 text-sm font-medium text-white dark:bg-white dark:text-neutral-900"
+            className="rounded-md bg-neutral-900 px-3 py-1.5 text-sm font-medium text-white dark:bg-white dark:text-neutral-900"
           >
             Tisk žádosti
           </a>
-          <span className="ml-3 text-xs text-neutral-500">
-            úřední tiskopis s vyplněnými údaji
-          </span>
+          <Link
+            href={`/zaci/${v.id}/upravit`}
+            className="rounded-md border border-neutral-300 px-3 py-1.5 text-sm font-medium dark:border-neutral-700"
+          >
+            Upravit
+          </Link>
+          <Zruseni id={v.id} zruseno={v.stav === "zruseno"} />
         </div>
+
+        {v.stav === "zruseno" ? (
+          <p className="mt-3 rounded-md bg-neutral-100 px-3 py-2 text-sm text-neutral-600 dark:bg-neutral-900 dark:text-neutral-400">
+            Výcvik je zrušený. Záznam zůstává v evidenci, evidenční číslo se
+            nikomu jinému nepřidělí.
+          </p>
+        ) : null}
       </div>
 
       {vekPriPodani !== null && vekPriPodani < 18 ? (

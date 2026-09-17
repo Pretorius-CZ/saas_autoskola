@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useState } from "react";
-import { prijmiZaka, type StavFormulare } from "./akce";
+import type { HodnotyZaka, StavFormulare } from "@/lib/typy-formulare";
 import { KONTROLA_KONTROLNIHO_SOUCTU, datumNarozeniZRodnehoCisla } from "@/lib/rodne-cislo";
 import { posudVek } from "@/lib/vek";
 import { dnesek, formatDatum, vekKDatu } from "@/lib/datum";
@@ -49,17 +49,97 @@ function Predel({ popis }: { popis: string }) {
   );
 }
 
-export default function FormularPrijeti({ ucitele }: { ucitele: Ucitel[] }) {
-  const [stav, akce, probiha] = useActionState<StavFormulare, FormData>(prijmiZaka, {});
+/**
+ * Jedno políčko formuláře.
+ *
+ * MUSÍ být tady, na úrovni souboru. Kdyby bylo definované uvnitř
+ * komponenty formuláře, React by ho při každém stisku klávesy považoval
+ * za nový prvek, staré políčko by zahodil a kurzor by zmizel.
+ * Přesně to se tu jednou stalo.
+ *
+ * `sirka` je počet sloupců ze šesti (na širší obrazovce).
+ */
+function Pole({
+  klic,
+  popis,
+  sirka,
+  hodnota,
+  zmen,
+  tridy,
+  typ = "text",
+  povinne = true,
+  pod,
+  ...zbytek
+}: {
+  klic: string;
+  popis: string;
+  sirka: number;
+  hodnota: string;
+  zmen: (klic: string) => (e: { target: { value: string } }) => void;
+  tridy: (klic: string) => string;
+  typ?: string;
+  povinne?: boolean;
+  pod?: React.ReactNode;
+} & Omit<React.InputHTMLAttributes<HTMLInputElement>, "value" | "onChange">) {
+  return (
+    <label className={`block ${sloupce[sirka]}`}>
+      <span className="text-xs text-neutral-500">
+        {popis}
+        {povinne ? <span className="text-red-500"> *</span> : null}
+      </span>
+      <input
+        name={klic}
+        type={typ}
+        required={povinne}
+        value={hodnota}
+        onChange={zmen(klic)}
+        {...zbytek}
+        className={`mt-0.5 ${tridy(klic)}`}
+      />
+      {pod}
+    </label>
+  );
+}
+
+type Vlastnosti = {
+  ucitele: Ucitel[];
+  /** Server action, která formulář zpracuje. Přijetí i úprava mají vlastní. */
+  akceFormulare: (stav: StavFormulare, data: FormData) => Promise<StavFormulare>;
+  /** Předvyplněné hodnoty — u úpravy to, co je v databázi. */
+  pocatecni?: Partial<HodnotyZaka>;
+  /** Skupiny z řidičského průkazu, které mají být naklikané. */
+  pocatecniSkupiny?: string[];
+  /** Skrytá pole, která se odešlou spolu s formulářem (např. id výcviku). */
+  skryta?: Record<string, string>;
+  popisTlacitka: string;
+  popisPrubehu: string;
+  /** Řádek pod tlačítkem. */
+  poznamka?: string;
+  /** Kam vede odkaz „Zpět bez uložení". */
+  zpetOdkaz?: string;
+};
+
+export default function FormularZaka({
+  ucitele,
+  akceFormulare,
+  pocatecni,
+  pocatecniSkupiny,
+  skryta,
+  popisTlacitka,
+  popisPrubehu,
+  poznamka,
+  zpetOdkaz,
+}: Vlastnosti) {
+  const [stav, akce, probiha] = useActionState<StavFormulare, FormData>(akceFormulare, {});
 
   /**
    * Formulář si drží hodnoty sám: React po odeslání políčka vyprázdní
    * a rozbalovací seznamy by spadly na výchozí hodnotu.
    */
-  const [h, setH] = useState<Hodnoty>(vychozi);
+  const [h, setH] = useState<Hodnoty>(() => ({ ...vychozi(), ...pocatecni }));
   const [doplnenoSamo, setDoplnenoSamo] = useState(false);
   const [napovedaData, setNapovedaData] = useState<string | null>(null);
-  const [skupinyZPrukazu, setSkupinyZPrukazu] = useState<string[]>([]);
+  const [skupinyZPrukazu, setSkupinyZPrukazu] = useState<string[]>(pocatecniSkupiny ?? []);
 
   const zmen = (klic: string) => (e: { target: { value: string } }) =>
     setH((p) => ({ ...p, [klic]: e.target.value }));
@@ -104,52 +184,37 @@ export default function FormularPrijeti({ ucitele }: { ucitele: Ucitel[] }) {
       ? posudVek(h.datumNarozeni, h.skupina, h.datumPodaniZadosti || dnesek())
       : null;
 
-  /** Jedno políčko. `sirka` je počet sloupců z šesti (na širší obrazovce). */
-  function Pole({
-    klic,
-    popis,
-    sirka,
-    typ = "text",
-    povinne = true,
-    pod,
-    ...zbytek
-  }: {
-    klic: string;
-    popis: string;
-    sirka: number;
-    typ?: string;
-    povinne?: boolean;
-    pod?: React.ReactNode;
-  } & React.InputHTMLAttributes<HTMLInputElement>) {
-    return (
-      <label className={`block ${sloupce[sirka]}`}>
-        <span className="text-xs text-neutral-500">
-          {popis}
-          {povinne ? <span className="text-red-500"> *</span> : null}
-        </span>
-        <input
-          name={klic}
-          type={typ}
-          required={povinne}
-          value={h[klic]}
-          onChange={zmen(klic)}
-          {...zbytek}
-          className={`mt-0.5 ${tridy(klic)}`}
-        />
-        {pod}
-      </label>
-    );
-  }
-
   return (
     <form action={akce} className="space-y-4">
+      {skryta
+        ? Object.entries(skryta).map(([k, v]) => (
+            <input key={k} type="hidden" name={k} value={v} />
+          ))
+        : null}
+
       <div className="grid grid-cols-1 gap-x-3 gap-y-2.5 sm:grid-cols-6">
         <Predel popis="Žadatel" />
 
-        <Pole klic="jmeno" popis="Jméno" sirka={2} />
-        <Pole klic="prijmeni" popis="Příjmení" sirka={2} />
-        <Pole klic="titul" popis="Titul" sirka={1} povinne={false} />
-        <Pole klic="rodnePrijmeni" popis="Rodné příjmení" sirka={1} povinne={false} />
+        <Pole klic="jmeno" popis="Jméno" sirka={2}
+          hodnota={h.jmeno}
+          zmen={zmen}
+          tridy={tridy}
+        />
+        <Pole klic="prijmeni" popis="Příjmení" sirka={2}
+          hodnota={h.prijmeni}
+          zmen={zmen}
+          tridy={tridy}
+        />
+        <Pole klic="titul" popis="Titul" sirka={1} povinne={false}
+          hodnota={h.titul}
+          zmen={zmen}
+          tridy={tridy}
+        />
+        <Pole klic="rodnePrijmeni" popis="Rodné příjmení" sirka={1} povinne={false}
+          hodnota={h.rodnePrijmeni}
+          zmen={zmen}
+          tridy={tridy}
+        />
 
         <Pole
           klic="rodneCislo"
@@ -158,6 +223,9 @@ export default function FormularPrijeti({ ucitele }: { ucitele: Ucitel[] }) {
           inputMode="numeric"
           placeholder="9401011235"
           onBlur={zRodnehoCisla}
+          hodnota={h.rodneCislo}
+          zmen={zmen}
+          tridy={tridy}
           pod={
             KONTROLA_KONTROLNIHO_SOUCTU ? null : (
               <span className="mt-0.5 block text-xs text-amber-600 dark:text-amber-400">
@@ -188,9 +256,17 @@ export default function FormularPrijeti({ ucitele }: { ucitele: Ucitel[] }) {
             </span>
           ) : null}
         </label>
-        <Pole klic="mistoNarozeni" popis="Místo narození" sirka={2} />
+        <Pole klic="mistoNarozeni" popis="Místo narození" sirka={2}
+          hodnota={h.mistoNarozeni}
+          zmen={zmen}
+          tridy={tridy}
+        />
 
-        <Pole klic="statniPrislusnost" popis="Státní příslušnost" sirka={2} />
+        <Pole klic="statniPrislusnost" popis="Státní příslušnost" sirka={2}
+          hodnota={h.statniPrislusnost}
+          zmen={zmen}
+          tridy={tridy}
+        />
         <label className={`block ${sloupce[2]}`}>
           <span className="text-xs text-neutral-500">
             Doklad totožnosti<span className="text-red-500"> *</span>
@@ -206,11 +282,27 @@ export default function FormularPrijeti({ ucitele }: { ucitele: Ucitel[] }) {
             <option>povolení k pobytu</option>
           </select>
         </label>
-        <Pole klic="dokladCislo" popis="Číslo dokladu" sirka={2} />
+        <Pole klic="dokladCislo" popis="Číslo dokladu" sirka={2}
+          hodnota={h.dokladCislo}
+          zmen={zmen}
+          tridy={tridy}
+        />
 
-        <Pole klic="ulice" popis="Ulice a číslo popisné" sirka={3} />
-        <Pole klic="mesto" popis="Obec" sirka={2} />
-        <Pole klic="psc" popis="PSČ" sirka={1} inputMode="numeric" />
+        <Pole klic="ulice" popis="Ulice a číslo popisné" sirka={3}
+          hodnota={h.ulice}
+          zmen={zmen}
+          tridy={tridy}
+        />
+        <Pole klic="mesto" popis="Obec" sirka={2}
+          hodnota={h.mesto}
+          zmen={zmen}
+          tridy={tridy}
+        />
+        <Pole klic="psc" popis="PSČ" sirka={1} inputMode="numeric"
+          hodnota={h.psc}
+          zmen={zmen}
+          tridy={tridy}
+        />
 
         <Pole
           klic="telefon"
@@ -219,9 +311,20 @@ export default function FormularPrijeti({ ucitele }: { ucitele: Ucitel[] }) {
           typ="tel"
           inputMode="numeric"
           placeholder="601 111 111"
+          hodnota={h.telefon}
+          zmen={zmen}
+          tridy={tridy}
         />
-        <Pole klic="email" popis="E-mail" sirka={2} typ="email" povinne={false} />
-        <Pole klic="orpBydliste" popis="Úřad (ORP) podle bydliště" sirka={2} />
+        <Pole klic="email" popis="E-mail" sirka={2} typ="email" povinne={false}
+          hodnota={h.email}
+          zmen={zmen}
+          tridy={tridy}
+        />
+        <Pole klic="orpBydliste" popis="Úřad (ORP) podle bydliště" sirka={2}
+          hodnota={h.orpBydliste}
+          zmen={zmen}
+          tridy={tridy}
+        />
 
         <Predel popis="Výcvik" />
 
@@ -285,13 +388,20 @@ export default function FormularPrijeti({ ucitele }: { ucitele: Ucitel[] }) {
           sirka={3}
           typ="date"
           povinne={false}
+          hodnota={h.lekarskyPosudek}
+          zmen={zmen}
+          tridy={tridy}
           pod={
             <span className="mt-0.5 block text-xs text-neutral-500">
               při podání nesmí být starší tří měsíců (§ 13)
             </span>
           }
         />
-        <Pole klic="datumPodaniZadosti" popis="Podání žádosti" sirka={3} typ="date" />
+        <Pole klic="datumPodaniZadosti" popis="Podání žádosti" sirka={3} typ="date"
+          hodnota={h.datumPodaniZadosti}
+          zmen={zmen}
+          tridy={tridy}
+        />
 
         {vekPriPodani !== null && vekPriPodani < 18 ? (
           <p className="col-span-full rounded-md bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:bg-amber-950 dark:text-amber-200">
@@ -322,7 +432,11 @@ export default function FormularPrijeti({ ucitele }: { ucitele: Ucitel[] }) {
           <>
             <Predel popis="Stávající řidičské oprávnění" />
 
-            <Pole klic="ridicskyPrukazCislo" popis="Číslo řidičského průkazu" sirka={2} />
+            <Pole klic="ridicskyPrukazCislo" popis="Číslo řidičského průkazu" sirka={2}
+          hodnota={h.ridicskyPrukazCislo}
+          zmen={zmen}
+          tridy={tridy}
+        />
 
             <fieldset className="col-span-full sm:col-span-4">
               <legend className="text-xs text-neutral-500">
@@ -378,9 +492,20 @@ export default function FormularPrijeti({ ucitele }: { ucitele: Ucitel[] }) {
           disabled={probiha}
           className="rounded-md bg-neutral-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50 dark:bg-white dark:text-neutral-900"
         >
-          {probiha ? "Zakládám…" : "Přijmout žáka"}
+          {probiha ? popisPrubehu : popisTlacitka}
         </button>
-        <p className="text-xs text-neutral-500">Evidenční číslo přidělí systém sám.</p>
+        {zpetOdkaz ? (
+          <a
+            href={zpetOdkaz}
+            className="text-sm text-neutral-500 underline-offset-4 hover:underline"
+          >
+            Zpět bez uložení
+          </a>
+        ) : null}
+        {poznamka ? <p className="text-xs text-neutral-500">{poznamka}</p> : null}
+        {stav.hotovo && !probiha ? (
+          <span className="text-xs text-emerald-600 dark:text-emerald-400">Uloženo.</span>
+        ) : null}
       </div>
     </form>
   );
