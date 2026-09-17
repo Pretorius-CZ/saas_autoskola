@@ -316,9 +316,14 @@ export default async function KartaZaka({
             <ul className="mt-0.5 space-y-0.5">
               {budouci.slice(0, 6).map((x) => (
                 <li key={x.t.id} className="text-sm">
-                  <span className="text-neutral-500">{nazevDne(x.t.zacatek)} </span>
-                  <span className="tabular-nums">{denAMesic(x.t.zacatek)}</span>{" "}
-                  <span className="tabular-nums">{rozsah(x.t.zacatek, x.t.delkaMinut)}</span>
+                  <Link
+                    href={`/kalendar/${x.t.id}`}
+                    className="underline-offset-4 hover:underline"
+                  >
+                    <span className="text-neutral-500">{nazevDne(x.t.zacatek)} </span>
+                    <span className="tabular-nums">{denAMesic(x.t.zacatek)}</span>{" "}
+                    <span className="tabular-nums">{rozsah(x.t.zacatek, x.t.delkaMinut)}</span>
+                  </Link>
                   <span className="text-neutral-500">
                     {" · "}
                     {x.t.druh === "teorie" ? "teorie" : "jízda"}

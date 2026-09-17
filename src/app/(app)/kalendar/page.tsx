@@ -171,11 +171,18 @@ export default async function Kalendar({
                       }`}
                     >
                       <p className="text-sm">
-                        <span className="tabular-nums">
+                        <Link
+                          href={`/kalendar/${z.t.id}`}
+                          className="tabular-nums underline-offset-4 hover:underline"
+                        >
                           {rozsah(z.t.zacatek, z.t.delkaMinut)}
-                        </span>
+                        </Link>
                         {z.t.stav === "zruseno" ? (
                           <span className="ml-1 text-xs text-neutral-500">zrušeno</span>
+                        ) : z.t.stav === "probehlo" ? (
+                          <span className="ml-1 text-xs text-emerald-600 dark:text-emerald-400">
+                            ✓
+                          </span>
                         ) : null}
                       </p>
 

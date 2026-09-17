@@ -156,9 +156,14 @@ export default async function KartaKurzu({
           <ul className="mt-2 space-y-0.5">
             {konzultace.map((k) => (
               <li key={k.t.id} className="text-sm">
-                <span className="text-neutral-500">{nazevDne(k.t.zacatek)} </span>
-                <span className="tabular-nums">{denAMesic(k.t.zacatek)}</span>{" "}
-                <span className="tabular-nums">{rozsah(k.t.zacatek, k.t.delkaMinut)}</span>
+                <Link
+                  href={`/kalendar/${k.t.id}`}
+                  className="underline-offset-4 hover:underline"
+                >
+                  <span className="text-neutral-500">{nazevDne(k.t.zacatek)} </span>
+                  <span className="tabular-nums">{denAMesic(k.t.zacatek)}</span>{" "}
+                  <span className="tabular-nums">{rozsah(k.t.zacatek, k.t.delkaMinut)}</span>
+                </Link>
                 <span className="text-neutral-500">
                   {" · "}
                   {predmety.find((p) => p.klic === k.t.predmet)?.nazev ?? "bez předmětu"}
