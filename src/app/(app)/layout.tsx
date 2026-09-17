@@ -7,6 +7,7 @@ export const dynamic = "force-dynamic";
 
 const odkazy = [
   { href: "/", popis: "Přehled" },
+  { href: "/zaci", popis: "Žáci" },
   { href: "/ucitele", popis: "Učitelé" },
   { href: "/vozidla", popis: "Vozidla" },
   { href: "/nastaveni", popis: "Nastavení" },

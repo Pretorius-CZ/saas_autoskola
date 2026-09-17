@@ -13,6 +13,10 @@ const schema = z.object({
   // Podepisuje přihlášení. Bez něj přihlašování nefunguje.
   BETTER_AUTH_SECRET: z.string().min(32).optional(),
 
+  // Šifruje rodná čísla v databázi. 32 bajtů zapsaných v base64.
+  // Vygeneruj: node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
+  SIFROVACI_KLIC: z.string().optional(),
+
   // Když je vyplněná, má přednost před vším ostatním.
   BETTER_AUTH_URL: z.string().url().optional(),
 

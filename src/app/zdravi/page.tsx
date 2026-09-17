@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 import { getDb } from "@/db";
+import { sifrovaniFunguje } from "@/lib/sifrovani";
 
 /**
  * Veřejná stránka o stavu systému — schválně BEZ přihlášení.
@@ -46,6 +47,14 @@ async function zjistiStav(): Promise<Stav[]> {
   } catch {
     stavy.push({ ok: false, popis: "Databáze není připravená" });
   }
+
+  // Bez klíče nejde uložit rodné číslo. Aplikace jinak běží, ale přijetí
+  // žáka by selhalo až ve chvíli uložení — a to je pozdě.
+  stavy.push(
+    sifrovaniFunguje()
+      ? { ok: true, popis: "Šifrování citlivých údajů je nastavené" }
+      : { ok: false, popis: "Chybí šifrovací klíč — rodná čísla nelze uložit" },
+  );
 
   return stavy;
 }
