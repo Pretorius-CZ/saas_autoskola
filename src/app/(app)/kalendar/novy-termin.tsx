@@ -1,7 +1,9 @@
 "use client";
 
+import Link from "next/link";
 import { useActionState, useEffect, useState } from "react";
 import { CASY, DELKY } from "@/lib/cas";
+import { PREDMETY } from "@/lib/osnova";
 import { ulozTermin, type StavTerminu } from "./akce-terminy";
 
 type Ucitel = { id: string; jmeno: string; prijmeni: string };
@@ -28,14 +30,26 @@ export default function NovyTermin({
   kurzy,
   zaci,
   vychoziDatum,
+  otevreno,
+  odkazOtevrit,
+  odkazZavrit,
 }: {
   ucitele: Ucitel[];
   vozidla: Vozidlo[];
   kurzy: Kurz[];
   zaci: Zak[];
   vychoziDatum: string;
+  /**
+   * Otevřenost formuláře řídí adresa (?nove=...), ne vnitřní stav.
+   *
+   * Dřív to byl useState a přechod na jinou adresu ho nepřepočítal —
+   * odkaz změnil adresu a formulář zůstal zavřený. Adresa je jeden zdroj
+   * pravdy a odpadá tím celá třída takových nesouladů.
+   */
+  otevreno?: boolean;
+  odkazOtevrit: string;
+  odkazZavrit: string;
 }) {
-  const [otevreno, setOtevreno] = useState(false);
   const [stav, akce, probiha] = useActionState<StavTerminu, FormData>(ulozTermin, {});
 
   /**
@@ -53,6 +67,7 @@ export default function NovyTermin({
     ucitelId: "",
     vozidloId: "",
     kurzId: "",
+    predmet: "",
     vycvikId: "",
     tema: "",
     misto: "",
@@ -62,6 +77,11 @@ export default function NovyTermin({
 
   const zmen = (klic: string) => (e: { target: { value: string } }) =>
     setH((p) => ({ ...p, [klic]: e.target.value }));
+
+  // Klik na jiný den změní adresu; formulář na to musí zareagovat.
+  useEffect(() => {
+    setH((p) => ({ ...p, datum: vychoziDatum }));
+  }, [vychoziDatum]);
 
   useEffect(() => {
     if (stav.hodnoty) setH((p) => ({ ...p, ...stav.hodnoty }));
@@ -81,9 +101,9 @@ export default function NovyTermin({
   if (!otevreno) {
     return (
       <div className="flex items-center gap-3">
-        <button onClick={() => setOtevreno(true)} className="tlacitko">
+        <Link href={odkazOtevrit} className="tlacitko">
           Naplánovat termín
-        </button>
+        </Link>
         {stav.hotovo ? (
           <span className="text-sm text-emerald-600 dark:text-emerald-400">Uloženo.</span>
         ) : null}
@@ -101,7 +121,7 @@ export default function NovyTermin({
           <span className="text-xs text-neutral-500">Druh</span>
           <select name="druh" value={h.druh} onChange={zmen("druh")} className={tridy("druh")}>
             <option value="jizda">jízda</option>
-            <option value="teorie">teorie</option>
+            <option value="teorie">konzultace</option>
             <option value="udrzba">údržba</option>
             <option value="zdravotni">zdravotní příprava</option>
           </select>
@@ -164,22 +184,43 @@ export default function NovyTermin({
         </label>
 
         {h.druh === "teorie" ? (
-          <label className="block sm:col-span-3">
-            <span className="text-xs text-neutral-500">Kurz</span>
-            <select
-              name="kurzId"
-              value={h.kurzId}
-              onChange={zmen("kurzId")}
-              className={tridy("kurzId")}
-            >
-              <option value="">vyber kurz</option>
-              {kurzy.map((k) => (
-                <option key={k.id} value={k.id}>
-                  {k.nazev} ({k.skupina})
-                </option>
-              ))}
-            </select>
-          </label>
+          <>
+            <label className="block sm:col-span-3">
+              <span className="text-xs text-neutral-500">Kurz</span>
+              <select
+                name="kurzId"
+                value={h.kurzId}
+                onChange={zmen("kurzId")}
+                className={tridy("kurzId")}
+              >
+                <option value="">vyber kurz</option>
+                {kurzy.map((k) => (
+                  <option key={k.id} value={k.id}>
+                    {k.nazev} ({k.skupina})
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label className="block sm:col-span-3">
+              <span className="text-xs text-neutral-500">Předmět osnovy</span>
+              <select
+                name="predmet"
+                value={h.predmet}
+                onChange={zmen("predmet")}
+                className={tridy("predmet")}
+              >
+                <option value="">vyber předmět</option>
+                {(PREDMETY[kurzy.find((k) => k.id === h.kurzId)?.skupina ?? "B"] ?? PREDMETY.B).map(
+                  (p) => (
+                    <option key={p.klic} value={p.klic}>
+                      {p.nazev}
+                    </option>
+                  ),
+                )}
+              </select>
+            </label>
+          </>
         ) : (
           <>
             <label className="block sm:col-span-3">
@@ -239,13 +280,12 @@ export default function NovyTermin({
         <button type="submit" disabled={probiha} className="tlacitko">
           {probiha ? "Ukládám…" : "Naplánovat"}
         </button>
-        <button
-          type="button"
-          onClick={() => setOtevreno(false)}
+        <Link
+          href={odkazZavrit}
           className="text-sm text-neutral-500 underline-offset-4 hover:underline"
         >
           Zavřít
-        </button>
+        </Link>
         {stav.hotovo && !probiha ? (
           <span className="text-sm text-emerald-600 dark:text-emerald-400">
             Uloženo, můžeš plánovat další.

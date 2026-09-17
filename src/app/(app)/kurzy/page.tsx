@@ -44,13 +44,18 @@ export default async function Kurzy() {
         </p>
       </div>
 
-      <KurzFormulare kurzy={data.seznam.map((k) => ({
-        id: k.id,
-        nazev: k.nazev,
-        skupina: k.skupina,
-        datumZahajeni: k.datumZahajeni ? formatDatum(k.datumZahajeni) : null,
-        poznamka: k.poznamka,
-      }))} zaci={data.zaciSeznam} />
+      <KurzFormulare
+        kurzy={data.seznam.map((k) => ({
+          id: k.id,
+          nazev: k.nazev,
+          skupina: k.skupina,
+          datumZahajeni: k.datumZahajeni ? formatDatum(k.datumZahajeni) : null,
+          datumZahajeniVstup: k.datumZahajeni ?? "",
+          poznamka: k.poznamka,
+          aktivni: k.aktivni,
+        }))}
+        zaci={data.zaciSeznam}
+      />
     </main>
   );
 }

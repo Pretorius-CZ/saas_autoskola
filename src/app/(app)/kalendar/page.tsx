@@ -22,10 +22,10 @@ const BARVY = [
 export default async function Kalendar({
   searchParams,
 }: {
-  searchParams: Promise<{ tyden?: string }>;
+  searchParams: Promise<{ tyden?: string; nove?: string }>;
 }) {
   const kdo = await vyzadujPrihlaseni();
-  const { tyden: zadany } = await searchParams;
+  const { tyden: zadany, nove } = await searchParams;
 
   const od = pondeli(zAdresy(zadany));
   const do_ = pridejDny(od, 7);
@@ -129,7 +129,10 @@ export default async function Kalendar({
         vozidla={data.seznamVozidel}
         kurzy={data.seznamKurzu}
         zaci={data.seznamZaku}
-        vychoziDatum={proAdresu(od)}
+        vychoziDatum={nove ?? proAdresu(od)}
+        otevreno={Boolean(nove)}
+        odkazOtevrit={`/kalendar?tyden=${proAdresu(od)}&nove=${proAdresu(od)}`}
+        odkazZavrit={`/kalendar?tyden=${proAdresu(od)}`}
       />
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -213,6 +216,13 @@ export default async function Kalendar({
                   ))}
                 </ul>
               )}
+
+              <Link
+                href={`/kalendar?tyden=${proAdresu(od)}&nove=${denText}`}
+                className="mt-2 block rounded-md border border-dashed border-neutral-300 py-1 text-center text-xs text-neutral-500 hover:border-neutral-500 hover:text-neutral-700 dark:border-neutral-700 dark:hover:border-neutral-500 dark:hover:text-neutral-300"
+              >
+                + naplánovat
+              </Link>
             </section>
           );
         })}

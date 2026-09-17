@@ -1,12 +1,21 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { and, eq } from "drizzle-orm";
+import { and, asc, eq, ne, or } from "drizzle-orm";
 import { proAutoskolu } from "@/lib/db-tenant";
-import { ucitele, vycviky, zaci } from "@/db/schema";
+import { kurzy, terminy, ucitele, vycviky, zaci } from "@/db/schema";
 import { vyzadujPrihlaseni } from "@/lib/relace";
 import { formatDatum, vekKDatu } from "@/lib/datum";
 import { formatTelefon } from "@/lib/telefon";
 import { hlidani } from "@/lib/hlidani";
+import {
+  HODIN_VYCVIKU,
+  PREDMETY,
+  konzultaciCelkem,
+  konzultaciZaPredmet,
+  naHodiny,
+  osnovaPredepisuje,
+} from "@/lib/osnova";
+import { denAMesic, nazevDne, rozsah } from "@/lib/cas";
 import { desifruj } from "@/lib/sifrovani";
 import Prubeh from "./prubeh";
 import Zruseni from "./zruseni";
@@ -66,19 +75,70 @@ export default async function KartaZaka({
   const { id } = await params;
   const kdo = await vyzadujPrihlaseni();
 
-  const [zaznam] = await proAutoskolu(kdo, (tx) =>
-    tx
-      .select({ v: vycviky, z: zaci, u: ucitele })
+  const nactene = await proAutoskolu(kdo, async (tx) => {
+    const [zaznam] = await tx
+      .select({ v: vycviky, z: zaci, u: ucitele, k: kurzy })
       .from(vycviky)
       .innerJoin(zaci, eq(zaci.id, vycviky.zakId))
       .leftJoin(ucitele, eq(ucitele.id, vycviky.ucitelId))
+      .leftJoin(kurzy, eq(kurzy.id, vycviky.kurzId))
       .where(and(eq(vycviky.id, id), eq(vycviky.tenantId, kdo.autoskola.id)))
-      .limit(1),
-  );
+      .limit(1);
 
-  if (!zaznam) notFound();
+    if (!zaznam) return null;
 
-  const { v, z, u } = zaznam;
+    // Jeho jízdy a teorie jeho kurzu — pro něj je to jeden rozvrh.
+    const jehoTerminy = await tx
+      .select({ t: terminy, ucitel: ucitele })
+      .from(terminy)
+      .leftJoin(ucitele, eq(ucitele.id, terminy.ucitelId))
+      .where(
+        and(
+          eq(terminy.tenantId, kdo.autoskola.id),
+          ne(terminy.stav, "zruseno"),
+          zaznam.v.kurzId
+            ? or(
+                eq(terminy.vycvikId, zaznam.v.id),
+                and(eq(terminy.druh, "teorie"), eq(terminy.kurzId, zaznam.v.kurzId)),
+              )
+            : eq(terminy.vycvikId, zaznam.v.id),
+        ),
+      )
+      .orderBy(asc(terminy.zacatek));
+
+    return { zaznam, jehoTerminy };
+  });
+
+  if (!nactene) notFound();
+
+  const { zaznam, jehoTerminy } = nactene;
+  const { v, z, u, k } = zaznam;
+
+  const ted = Date.now();
+  const budouci = jehoTerminy.filter((x) => x.t.zacatek.getTime() >= ted);
+  const probehle = jehoTerminy.filter((x) => x.t.zacatek.getTime() < ted);
+
+  const minutJizd = probehle
+    .filter((x) => x.t.druh === "jizda")
+    .reduce((s, x) => s + x.t.delkaMinut, 0);
+  // Konzultace se počítají po předmětech — jinak nejde poznat, jestli
+  // má žák odbytou zdravotnickou přípravu, nebo jen pět hodin předpisů.
+  const konzultacePodlePredmetu = new Map<string, number>();
+  for (const x of probehle) {
+    if (x.t.druh !== "teorie") continue;
+    const klic = x.t.predmet ?? "?";
+    konzultacePodlePredmetu.set(
+      klic,
+      (konzultacePodlePredmetu.get(klic) ?? 0) + naHodiny(x.t.delkaMinut),
+    );
+  }
+
+  // U přezkoušení osnova nic nepředepisuje — hodiny se jen počítají.
+  const sOsnovou = osnovaPredepisuje(v.druh);
+  const predmety = sOsnovou ? (PREDMETY[v.skupina] ?? []) : [];
+  const cilJizd = sOsnovou ? HODIN_VYCVIKU[v.skupina] : undefined;
+  const cilKonzultaci = sOsnovou ? konzultaciCelkem(v.skupina) : null;
+  const konzultaciZatim = [...konzultacePodlePredmetu.values()].reduce((a, b) => a + b, 0);
   const upozorneni = hlidani(v);
 
   // Rodné číslo se rozšifruje až tady, pro zobrazení.
@@ -180,6 +240,96 @@ export default async function KartaZaka({
             datumDokonceni: v.datumDokonceni,
           }}
         />
+
+        <Predel popis="Výuka a výcvik" />
+
+        <Udaj popis="Kurz" hodnota={k?.nazev} sirka={2} />
+        <Udaj
+          popis="Odjeto"
+          hodnota={
+            <>
+              <span className="tabular-nums">{naHodiny(minutJizd)}</span>
+              {cilJizd ? <span className="text-neutral-500"> z {cilJizd} h</span> : " h"}
+            </>
+          }
+          sirka={2}
+        />
+        <Udaj
+          popis={sOsnovou ? "Konzultace (ISP)" : "Konzultace"}
+          hodnota={
+            <>
+              <span className="tabular-nums">{konzultaciZatim}</span>
+              {cilKonzultaci ? (
+                <span className="text-neutral-500"> z {cilKonzultaci} h</span>
+              ) : (
+                " h"
+              )}
+            </>
+          }
+          sirka={2}
+        />
+
+        {!sOsnovou ? (
+          <p className="col-span-full text-xs text-neutral-500">
+            U přezkoušení osnova počet konzultací ani jízd nepředepisuje — hodiny
+            se jen evidují.
+          </p>
+        ) : null}
+
+        {predmety.length > 0 ? (
+          <div className="col-span-full">
+            <p className="text-xs text-neutral-500">Konzultace po předmětech</p>
+            <ul className="mt-0.5 grid gap-x-6 gap-y-0.5 sm:grid-cols-2">
+              {predmety.map((p) => {
+                const mel = konzultacePodlePredmetu.get(p.klic) ?? 0;
+                const potreba = konzultaciZaPredmet(p.hodin);
+                const hotovo = mel >= potreba;
+                return (
+                  <li key={p.klic} className="flex justify-between gap-3 text-sm">
+                    <span className={hotovo ? "text-neutral-500" : ""}>{p.nazev}</span>
+                    <span
+                      className={
+                        hotovo
+                          ? "tabular-nums text-emerald-600 dark:text-emerald-400"
+                          : "tabular-nums"
+                      }
+                    >
+                      {mel} / {potreba}
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        ) : null}
+
+        <div className="col-span-full">
+          <p className="text-xs text-neutral-500">Nejbližší termíny</p>
+          {budouci.length === 0 ? (
+            <p className="text-sm text-neutral-400">
+              nic naplánovaného —{" "}
+              <Link href="/kalendar" className="underline underline-offset-4">
+                naplánovat
+              </Link>
+            </p>
+          ) : (
+            <ul className="mt-0.5 space-y-0.5">
+              {budouci.slice(0, 6).map((x) => (
+                <li key={x.t.id} className="text-sm">
+                  <span className="text-neutral-500">{nazevDne(x.t.zacatek)} </span>
+                  <span className="tabular-nums">{denAMesic(x.t.zacatek)}</span>{" "}
+                  <span className="tabular-nums">{rozsah(x.t.zacatek, x.t.delkaMinut)}</span>
+                  <span className="text-neutral-500">
+                    {" · "}
+                    {x.t.druh === "teorie" ? "teorie" : "jízda"}
+                    {x.ucitel ? ` · ${x.ucitel.prijmeni}` : ""}
+                    {x.t.misto ? ` · ${x.t.misto}` : ""}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
 
         <Predel popis="Žadatel" />
 

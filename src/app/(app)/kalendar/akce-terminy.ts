@@ -68,6 +68,9 @@ export async function ulozTermin(
   const vycvikId = text(f, "vycvikId");
 
   if (druh === "teorie" && !kurzId) return chybne("U teorie vyber kurz.", "kurzId");
+  if (druh === "teorie" && !text(f, "predmet")) {
+    return chybne("U konzultace vyber předmět osnovy.", "predmet");
+  }
   if (druh === "jizda" && !vycvikId) return chybne("U jízdy vyber žáka.", "vycvikId");
   if (druh === "jizda" && !ucitelId) return chybne("U jízdy vyber učitele.", "ucitelId");
 
@@ -146,6 +149,7 @@ export async function ulozTermin(
         vozidloId: druh === "jizda" ? vozidloId : null,
         kurzId: druh === "teorie" ? kurzId : null,
         vycvikId: druh === "jizda" ? vycvikId : null,
+        predmet: druh === "teorie" ? text(f, "predmet") : null,
         tema: text(f, "tema"),
         misto: text(f, "misto"),
         poznamka: text(f, "poznamka"),

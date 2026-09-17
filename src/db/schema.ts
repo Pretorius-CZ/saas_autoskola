@@ -368,6 +368,11 @@ export const terminy = pgTable(
     kurzId: uuid("kurz_id").references(() => kurzy.id, { onDelete: "cascade" }),
     vycvikId: uuid("vycvik_id").references(() => vycviky.id, { onDelete: "cascade" }),
 
+    // U konzultace (druh 'teorie') který předmět osnovy se probíral.
+    // Bez toho by nešlo poznat, jestli má žák odbyté konzultace ze
+    // zdravotnické přípravy, nebo jich pět odseděl z předpisů.
+    predmet: text("predmet"),
+
     tema: text("tema"),
     poznamka: text("poznamka"),
     misto: text("misto"),
