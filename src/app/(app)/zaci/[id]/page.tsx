@@ -4,7 +4,7 @@ import { and, eq } from "drizzle-orm";
 import { proAutoskolu } from "@/lib/db-tenant";
 import { ucitele, vycviky, zaci } from "@/db/schema";
 import { vyzadujPrihlaseni } from "@/lib/relace";
-import { formatDatum } from "@/lib/datum";
+import { formatDatum, vekKDatu } from "@/lib/datum";
 import { formatTelefon } from "@/lib/telefon";
 import { spocitejLhuty, type StavLhuty } from "@/lib/lhuty";
 import { desifruj } from "@/lib/sifrovani";
@@ -74,6 +74,11 @@ export default async function KartaZaka({
   const { v, z, u } = zaznam;
   const lhuty = spocitejLhuty(v);
 
+  // Zákonného zástupce neevidujeme — jen připomínáme, že podpis je potřeba.
+  const vekPriPodani = v.datumPodaniZadosti
+    ? vekKDatu(z.datumNarozeni, v.datumPodaniZadosti)
+    : null;
+
   // Rodné číslo se rozšifruje až tady, pro zobrazení. V databázi ani
   // v odpovědi ze seznamu nikde v čitelné podobě není.
   const rodneCislo = desifruj(z.rodneCisloSifr);
@@ -93,6 +98,14 @@ export default async function KartaZaka({
           skupina {v.skupina} · {DRUHY[v.druh] ?? v.druh} · {STAVY[v.stav] ?? v.stav}
         </p>
       </div>
+
+      {vekPriPodani !== null && vekPriPodani < 18 ? (
+        <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:bg-amber-950 dark:text-amber-200">
+          Při podání žádosti bylo žadateli {vekPriPodani} let — na žádosti musí být
+          podpis zákonného zástupce
+          {vekPriPodani < 15 ? ", a to úředně ověřený" : ""}.
+        </p>
+      ) : null}
 
       <section>
         <h2 className="text-sm font-medium text-neutral-500">Zákonné lhůty</h2>
@@ -181,14 +194,6 @@ export default async function KartaZaka({
                 .join(" · ") || null
             }
           />
-          {z.zastupceJmeno ? (
-            <Radek
-              popis="Zákonný zástupce"
-              hodnota={`${z.zastupceJmeno}${z.zastupceVztah ? ` (${z.zastupceVztah})` : ""}${
-                z.zastupceTelefon ? ` · ${formatTelefon(z.zastupceTelefon)}` : ""
-              }`}
-            />
-          ) : null}
         </dl>
       </section>
 

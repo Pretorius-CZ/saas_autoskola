@@ -7,7 +7,7 @@ import { vyzadujPrihlaseni } from "@/lib/relace";
 import { vycviky, zaci } from "@/db/schema";
 import { normalizujRodneCislo, overRodneCislo } from "@/lib/rodne-cislo";
 import { posudVek } from "@/lib/vek";
-import { dnesek, vekKDatu } from "@/lib/datum";
+import { dnesek } from "@/lib/datum";
 import { overTelefon } from "@/lib/telefon";
 import { sifrovaniFunguje, zasifruj } from "@/lib/sifrovani";
 
@@ -75,14 +75,10 @@ export async function prijmiZaka(
     return chyba("Vyplň úřad (ORP) podle bydliště žadatele.", "orpBydliste");
   }
 
-  for (const [pole, popis] of [
-    ["telefon", "Telefon"],
-    ["zastupceTelefon", "Telefon zákonného zástupce"],
-  ] as const) {
-    const hodnota = text(f, pole);
-    if (!hodnota) continue;
-    const t = overTelefon(hodnota);
-    if (!t.ok) return chyba(`${popis}: ${t.duvod}`, pole);
+  const telefon = text(f, "telefon");
+  if (telefon) {
+    const t = overTelefon(telefon);
+    if (!t.ok) return chyba(t.duvod!, "telefon");
   }
 
   // U rozšíření potřebujeme vědět, co už žadatel má — jde to do podání.
@@ -107,16 +103,6 @@ export async function prijmiZaka(
   if (!sifrovaniFunguje()) {
     return chyba(
       "Není nastavený šifrovací klíč, takže rodné číslo nelze bezpečně uložit. Zkontroluj stav systému.",
-    );
-  }
-
-  // Nezletilý potřebuje podpis zákonného zástupce. Systém to nevymáhá
-  // na papíře, ale nesmí dovolit, aby se na to zapomnělo.
-  const zastupceJmeno = text(f, "zastupceJmeno");
-  if (vekKDatu(datumNarozeni, podani) < 18 && !zastupceJmeno) {
-    return chyba(
-      "Žadatel je nezletilý — vyplň zákonného zástupce. Žádost musí podepsat i on (u mladších 15 let úředně ověřeně).",
-      "zastupceJmeno",
     );
   }
 
@@ -153,9 +139,6 @@ export async function prijmiZaka(
         email: text(f, "email"),
         dokladTyp: text(f, "dokladTyp"),
         dokladCislo: text(f, "dokladCislo"),
-        zastupceJmeno,
-        zastupceVztah: text(f, "zastupceVztah"),
-        zastupceTelefon: text(f, "zastupceTelefon"),
       })
       .returning({ id: zaci.id });
 

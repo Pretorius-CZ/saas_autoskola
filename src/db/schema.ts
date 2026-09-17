@@ -206,11 +206,10 @@ export const zaci = pgTable("zaci", {
   dokladTyp: text("doklad_typ"),
   dokladCislo: text("doklad_cislo"),
 
-  // Vyplňuje se jen u nezletilých. U mladších 15 let (AM) musí být
-  // podpis zástupce úředně ověřený — to hlídá papír, ne systém.
-  zastupceJmeno: text("zastupce_jmeno"),
-  zastupceVztah: text("zastupce_vztah"),
-  zastupceTelefon: text("zastupce_telefon"),
+  // Zákonného zástupce záměrně NEEVIDUJEME. Je to podmínka pro podpis
+  // na žádosti, ne údaj, se kterým bychom dál pracovali — a je to osobní
+  // údaj někoho, kdo náš žák není. Systém jen upozorní, že podpis je
+  // potřeba (a u mladších 15 let úředně ověřený).
 
   poznamka: text("poznamka"),
 

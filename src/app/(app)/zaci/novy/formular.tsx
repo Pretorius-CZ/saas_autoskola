@@ -4,7 +4,7 @@ import { useActionState, useEffect, useState } from "react";
 import { prijmiZaka, type StavFormulare } from "./akce";
 import { KONTROLA_KONTROLNIHO_SOUCTU, datumNarozeniZRodnehoCisla } from "@/lib/rodne-cislo";
 import { posudVek } from "@/lib/vek";
-import { dnesek, formatDatum } from "@/lib/datum";
+import { dnesek, formatDatum, vekKDatu } from "@/lib/datum";
 
 type Ucitel = { id: string; jmeno: string; prijmeni: string };
 
@@ -19,56 +19,44 @@ const SKUPINY_V_PRUKAZU = [
   "D1", "D1+E", "D", "D+E",
 ];
 
-const ramecek =
-  "mt-1 w-full rounded-lg border bg-white px-3 py-2 text-base outline-none dark:bg-neutral-900";
-const bezny = "border-neutral-300 focus:border-neutral-500 dark:border-neutral-700";
-const chybny = "border-red-500 focus:border-red-600 dark:border-red-500";
-
 type Hodnoty = Record<string, string>;
 
 function vychozi(): Hodnoty {
   return {
-    jmeno: "",
-    prijmeni: "",
-    titul: "",
-    rodnePrijmeni: "",
-    rodneCislo: "",
-    datumNarozeni: "",
-    mistoNarozeni: "",
-    statniPrislusnost: "ČR",
-    ulice: "",
-    mesto: "",
-    psc: "",
-    telefon: "",
-    email: "",
-    dokladTyp: "občanský průkaz",
-    dokladCislo: "",
-    zastupceJmeno: "",
-    zastupceVztah: "",
-    zastupceTelefon: "",
-    skupina: "B",
-    druh: "prvni",
-    lekarskyPosudek: "",
-    datumPodaniZadosti: dnesek(),
-    orpBydliste: "",
-    ucitelId: "",
-    ridicskyPrukazCislo: "",
+    jmeno: "", prijmeni: "", titul: "", rodnePrijmeni: "",
+    rodneCislo: "", datumNarozeni: "", mistoNarozeni: "", statniPrislusnost: "ČR",
+    ulice: "", mesto: "", psc: "", telefon: "", email: "",
+    dokladTyp: "občanský průkaz", dokladCislo: "",
+    skupina: "B", druh: "prvni", lekarskyPosudek: "", datumPodaniZadosti: dnesek(),
+    orpBydliste: "", ucitelId: "", ridicskyPrukazCislo: "",
   };
+}
+
+const vstup =
+  "w-full rounded-md border bg-white px-2.5 py-1.5 text-sm outline-none dark:bg-neutral-900";
+const bezny = "border-neutral-300 focus:border-neutral-500 dark:border-neutral-700";
+const chybny = "border-red-500 focus:border-red-600 dark:border-red-500";
+
+/** Tenký předěl místo nadpisu sekce — odděluje, ale nezabírá řádek navíc. */
+function Predel({ popis }: { popis: string }) {
+  return (
+    <div className="col-span-full mt-2 flex items-center gap-3 first:mt-0">
+      <span className="text-xs font-medium uppercase tracking-wide text-neutral-400">
+        {popis}
+      </span>
+      <span className="h-px flex-1 bg-neutral-200 dark:bg-neutral-800" />
+    </div>
+  );
 }
 
 export default function FormularPrijeti({ ucitele }: { ucitele: Ucitel[] }) {
   const [stav, akce, probiha] = useActionState<StavFormulare, FormData>(prijmiZaka, {});
 
   /**
-   * Formulář si drží hodnoty sám.
-   *
-   * React po odeslání formulář vyprázdní a políčka vrátí do výchozího stavu.
-   * U textových polí by se to dalo obejít, u rozbalovacích seznamů ne —
-   * skupina by po každé chybě spadla zpátky na B. Proto si stav držíme tady.
+   * Formulář si drží hodnoty sám: React po odeslání políčka vyprázdní
+   * a rozbalovací seznamy by spadly na výchozí hodnotu.
    */
   const [h, setH] = useState<Hodnoty>(vychozi);
-
-  // Doplnili jsme datum narození sami? Pak ho smíme přepsat.
   const [doplnenoSamo, setDoplnenoSamo] = useState(false);
   const [napovedaData, setNapovedaData] = useState<string | null>(null);
   const [skupinyZPrukazu, setSkupinyZPrukazu] = useState<string[]>([]);
@@ -76,12 +64,10 @@ export default function FormularPrijeti({ ucitele }: { ucitele: Ucitel[] }) {
   const zmen = (klic: string) => (e: { target: { value: string } }) =>
     setH((p) => ({ ...p, [klic]: e.target.value }));
 
-  // Když se server ozve s chybou, vrátí s ní i to, co bylo odeslané.
   useEffect(() => {
     if (stav.hodnoty) setH((p) => ({ ...p, ...stav.hodnoty }));
   }, [stav]);
 
-  // Po chybě skoč na pole, které je potřeba spravit.
   useEffect(() => {
     if (!stav.pole) return;
     const prvek = document.querySelector<HTMLElement>(`[name="${stav.pole}"]`);
@@ -89,15 +75,12 @@ export default function FormularPrijeti({ ucitele }: { ucitele: Ucitel[] }) {
     prvek?.scrollIntoView({ block: "center", behavior: "smooth" });
   }, [stav]);
 
-  const jeChybne = (klic: string) => stav.pole === klic;
-  const tridy = (klic: string) => `${ramecek} ${jeChybne(klic) ? chybny : bezny}`;
+  const tridy = (klic: string) => `${vstup} ${stav.pole === klic ? chybny : bezny}`;
 
   /**
-   * Datum narození je v rodném čísle obsažené, tak ho nechceme psát dvakrát.
-   *
-   * Až když z pole odejdeš, ne během psaní: desetimístné rodné číslo totiž
-   * při psaní na chvíli vypadá jako devítimístné, a ta se přidělovala do
-   * roku 1953 — z roku 2010 by vyšel rok 1910.
+   * Datum narození dopočítáme z rodného čísla, ale až když z pole odejdeš.
+   * Během psaní vypadá desetimístné číslo chvíli jako devítimístné a ta
+   * se přidělovala do roku 1953 — z roku 2010 by vyšel rok 1910.
    */
   function zRodnehoCisla() {
     const spocitane = datumNarozeniZRodnehoCisla(h.rodneCislo);
@@ -107,371 +90,247 @@ export default function FormularPrijeti({ ucitele }: { ucitele: Ucitel[] }) {
     if (!h.datumNarozeni || doplnenoSamo) {
       setH((p) => ({ ...p, datumNarozeni: spocitane }));
       setDoplnenoSamo(true);
-      setNapovedaData("Doplněno z rodného čísla.");
     } else if (h.datumNarozeni !== spocitane) {
-      setNapovedaData(
-        `Podle rodného čísla by to bylo ${formatDatum(spocitane)} — zkontroluj to.`,
-      );
+      setNapovedaData(`Podle rodného čísla ${formatDatum(spocitane)}`);
     }
   }
 
-  // Věk se přepočítá při každé změně, bez čekání na odeslání.
+  const vekPriPodani = h.datumNarozeni
+    ? vekKDatu(h.datumNarozeni, h.datumPodaniZadosti || dnesek())
+    : null;
+
   const posudek =
     h.datumNarozeni && h.skupina
       ? posudVek(h.datumNarozeni, h.skupina, h.datumPodaniZadosti || dnesek())
       : null;
 
+  /** Jedno políčko. `sirka` je počet sloupců z šesti (na širší obrazovce). */
+  function Pole({
+    klic,
+    popis,
+    sirka,
+    typ = "text",
+    povinne = true,
+    pod,
+    ...zbytek
+  }: {
+    klic: string;
+    popis: string;
+    sirka: number;
+    typ?: string;
+    povinne?: boolean;
+    pod?: React.ReactNode;
+  } & React.InputHTMLAttributes<HTMLInputElement>) {
+    return (
+      <label className={`block ${sloupce[sirka]}`}>
+        <span className="text-xs text-neutral-500">
+          {popis}
+          {povinne ? <span className="text-red-500"> *</span> : null}
+        </span>
+        <input
+          name={klic}
+          type={typ}
+          required={povinne}
+          value={h[klic]}
+          onChange={zmen(klic)}
+          {...zbytek}
+          className={`mt-0.5 ${tridy(klic)}`}
+        />
+        {pod}
+      </label>
+    );
+  }
+
   return (
-    <form action={akce} className="space-y-6">
-      <section className="border-t border-neutral-200 pt-6 dark:border-neutral-800">
-        <h2 className="font-medium">Žadatel</h2>
-        <p className="mt-1 text-sm text-neutral-500">
-          Horní část žádosti — vyplňuje ji žadatel sám, nebo ji podle občanky opíšeš ty.
-        </p>
+    <form action={akce} className="space-y-4">
+      <div className="grid grid-cols-1 gap-x-3 gap-y-2.5 sm:grid-cols-6">
+        <Predel popis="Žadatel" />
 
-        <div className="mt-4 grid gap-4 sm:grid-cols-2">
-          <label className="block">
-            <span className="text-sm text-neutral-500">
-              Jméno<span className="text-red-500"> *</span>
-            </span>
-            <input name="jmeno" required value={h.jmeno} onChange={zmen("jmeno")} className={tridy("jmeno")} />
-          </label>
+        <Pole klic="jmeno" popis="Jméno" sirka={2} />
+        <Pole klic="prijmeni" popis="Příjmení" sirka={2} />
+        <Pole klic="titul" popis="Titul" sirka={1} povinne={false} />
+        <Pole klic="rodnePrijmeni" popis="Rodné příjmení" sirka={1} povinne={false} />
 
-          <label className="block">
-            <span className="text-sm text-neutral-500">
-              Příjmení<span className="text-red-500"> *</span>
-            </span>
-            <input
-              name="prijmeni"
-              required
-              value={h.prijmeni}
-              onChange={zmen("prijmeni")}
-              className={tridy("prijmeni")}
-            />
-          </label>
-
-          <label className="block">
-            <span className="text-sm text-neutral-500">Titul</span>
-            <input name="titul" value={h.titul} onChange={zmen("titul")} className={tridy("titul")} />
-          </label>
-
-          <label className="block">
-            <span className="text-sm text-neutral-500">Rodné příjmení</span>
-            <input
-              name="rodnePrijmeni"
-              value={h.rodnePrijmeni}
-              onChange={zmen("rodnePrijmeni")}
-              className={tridy("rodnePrijmeni")}
-            />
-          </label>
-
-          <label className="block">
-            <span className="text-sm text-neutral-500">
-              Rodné číslo<span className="text-red-500"> *</span>
-            </span>
-            <input
-              name="rodneCislo"
-              required
-              inputMode="numeric"
-              placeholder="9401011235"
-              value={h.rodneCislo}
-              onChange={zmen("rodneCislo")}
-              onBlur={zRodnehoCisla}
-              className={tridy("rodneCislo")}
-            />
-            <span className="mt-1 block text-xs text-neutral-500">
-              Lomítko psát nemusíš. Ukládá se zašifrované.
-            </span>
-            {KONTROLA_KONTROLNIHO_SOUCTU ? null : (
-              <span className="mt-1 block text-xs text-amber-600 dark:text-amber-400">
-                Kontrolní součet je dočasně vypnutý kvůli zkoušení.
+        <Pole
+          klic="rodneCislo"
+          popis="Rodné číslo"
+          sirka={2}
+          inputMode="numeric"
+          placeholder="9401011235"
+          onBlur={zRodnehoCisla}
+          pod={
+            KONTROLA_KONTROLNIHO_SOUCTU ? null : (
+              <span className="mt-0.5 block text-xs text-amber-600 dark:text-amber-400">
+                kontrolní součet vypnutý
               </span>
-            )}
-          </label>
-
-          <label className="block">
-            <span className="text-sm text-neutral-500">
-              Datum narození<span className="text-red-500"> *</span>
+            )
+          }
+        />
+        <label className={`block ${sloupce[2]}`}>
+          <span className="text-xs text-neutral-500">
+            Datum narození<span className="text-red-500"> *</span>
+          </span>
+          <input
+            type="date"
+            name="datumNarozeni"
+            required
+            value={h.datumNarozeni}
+            onChange={(e) => {
+              setDoplnenoSamo(false);
+              setNapovedaData(null);
+              zmen("datumNarozeni")(e);
+            }}
+            className={`mt-0.5 ${tridy("datumNarozeni")}`}
+          />
+          {napovedaData ? (
+            <span className="mt-0.5 block text-xs text-amber-600 dark:text-amber-400">
+              {napovedaData}
             </span>
-            <input
-              type="date"
-              name="datumNarozeni"
-              required
-              value={h.datumNarozeni}
-              onChange={(e) => {
-                setDoplnenoSamo(false);
-                setNapovedaData(null);
-                zmen("datumNarozeni")(e);
-              }}
-              className={tridy("datumNarozeni")}
-            />
-            {napovedaData ? (
-              <span className="mt-1 block text-xs text-amber-600 dark:text-amber-400">
-                {napovedaData}
-              </span>
-            ) : null}
-          </label>
+          ) : null}
+        </label>
+        <Pole klic="mistoNarozeni" popis="Místo narození" sirka={2} />
 
-          <label className="block">
-            <span className="text-sm text-neutral-500">Místo narození</span>
-            <input
-              name="mistoNarozeni"
-              value={h.mistoNarozeni}
-              onChange={zmen("mistoNarozeni")}
-              className={tridy("mistoNarozeni")}
-            />
-          </label>
+        <Pole klic="statniPrislusnost" popis="Státní příslušnost" sirka={2} />
+        <label className={`block ${sloupce[2]}`}>
+          <span className="text-xs text-neutral-500">
+            Doklad totožnosti<span className="text-red-500"> *</span>
+          </span>
+          <select
+            name="dokladTyp"
+            value={h.dokladTyp}
+            onChange={zmen("dokladTyp")}
+            className={`mt-0.5 ${tridy("dokladTyp")}`}
+          >
+            <option>občanský průkaz</option>
+            <option>cestovní pas</option>
+            <option>povolení k pobytu</option>
+          </select>
+        </label>
+        <Pole klic="dokladCislo" popis="Číslo dokladu" sirka={2} />
 
-          <label className="block">
-            <span className="text-sm text-neutral-500">Státní příslušnost</span>
-            <input
-              name="statniPrislusnost"
-              value={h.statniPrislusnost}
-              onChange={zmen("statniPrislusnost")}
-              className={tridy("statniPrislusnost")}
-            />
-          </label>
-        </div>
-      </section>
+        <Pole klic="ulice" popis="Ulice a číslo popisné" sirka={3} />
+        <Pole klic="mesto" popis="Obec" sirka={2} />
+        <Pole klic="psc" popis="PSČ" sirka={1} inputMode="numeric" />
 
-      <section className="border-t border-neutral-200 pt-6 dark:border-neutral-800">
-        <h2 className="font-medium">Adresa trvalého pobytu</h2>
-        <div className="mt-4 grid gap-4 sm:grid-cols-2">
-          <label className="block sm:col-span-2">
-            <span className="text-sm text-neutral-500">Ulice a číslo popisné</span>
-            <input name="ulice" value={h.ulice} onChange={zmen("ulice")} className={tridy("ulice")} />
-          </label>
-          <label className="block">
-            <span className="text-sm text-neutral-500">Obec</span>
-            <input name="mesto" value={h.mesto} onChange={zmen("mesto")} className={tridy("mesto")} />
-          </label>
-          <label className="block">
-            <span className="text-sm text-neutral-500">PSČ</span>
-            <input
-              name="psc"
-              inputMode="numeric"
-              value={h.psc}
-              onChange={zmen("psc")}
-              className={tridy("psc")}
-            />
-          </label>
-        </div>
-      </section>
+        <Pole
+          klic="telefon"
+          popis="Telefon"
+          sirka={2}
+          typ="tel"
+          inputMode="numeric"
+          placeholder="601 111 111"
+        />
+        <Pole klic="email" popis="E-mail" sirka={2} typ="email" povinne={false} />
+        <Pole klic="orpBydliste" popis="Úřad (ORP) podle bydliště" sirka={2} />
 
-      <section className="border-t border-neutral-200 pt-6 dark:border-neutral-800">
-        <h2 className="font-medium">Kontakt a doklad</h2>
-        <div className="mt-4 grid gap-4 sm:grid-cols-2">
-          <label className="block">
-            <span className="text-sm text-neutral-500">Telefon</span>
-            <input
-              type="tel"
-              name="telefon"
-              inputMode="numeric"
-              placeholder="601 111 111"
-              value={h.telefon}
-              onChange={zmen("telefon")}
-              className={tridy("telefon")}
-            />
-            <span className="mt-1 block text-xs text-neutral-500">
-              Devět číslic, předvolbu psát nemusíš.
+        <Predel popis="Výcvik" />
+
+        <label className={`block ${sloupce[1]}`}>
+          <span className="text-xs text-neutral-500">
+            Skupina<span className="text-red-500"> *</span>
+          </span>
+          <select
+            name="skupina"
+            required
+            value={h.skupina}
+            onChange={zmen("skupina")}
+            className={`mt-0.5 ${tridy("skupina")}`}
+          >
+            {SKUPINY.map((s) => (
+              <option key={s}>{s}</option>
+            ))}
+          </select>
+        </label>
+
+        <label className={`block ${sloupce[2]}`}>
+          <span className="text-xs text-neutral-500">Druh</span>
+          <select
+            name="druh"
+            value={h.druh}
+            onChange={(e) => {
+              // U přezkoušení jde skoro vždycky o skupinu B, tak ji nabídneme.
+              if (e.target.value === "bodovy" && skupinyZPrukazu.length === 0) {
+                setSkupinyZPrukazu(["B"]);
+              }
+              zmen("druh")(e);
+            }}
+            className={`mt-0.5 ${tridy("druh")}`}
+          >
+            <option value="prvni">první řidičské oprávnění</option>
+            <option value="rozsireni">rozšíření</option>
+            <option value="bodovy">přezkoušení (bodový)</option>
+          </select>
+        </label>
+
+        <label className={`block ${sloupce[3]}`}>
+          <span className="text-xs text-neutral-500">Učitel</span>
+          <select
+            name="ucitelId"
+            value={h.ucitelId}
+            onChange={zmen("ucitelId")}
+            className={`mt-0.5 ${tridy("ucitelId")}`}
+          >
+            <option value="">zatím nepřidělen</option>
+            {ucitele.map((u) => (
+              <option key={u.id} value={u.id}>
+                {u.jmeno} {u.prijmeni}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <Pole
+          klic="lekarskyPosudek"
+          popis="Lékařský posudek"
+          sirka={3}
+          typ="date"
+          povinne={false}
+          pod={
+            <span className="mt-0.5 block text-xs text-neutral-500">
+              při podání nesmí být starší tří měsíců (§ 13)
             </span>
-          </label>
-          <label className="block">
-            <span className="text-sm text-neutral-500">E-mail</span>
-            <input type="email" name="email" value={h.email} onChange={zmen("email")} className={tridy("email")} />
-          </label>
-          <label className="block">
-            <span className="text-sm text-neutral-500">Doklad totožnosti</span>
-            <select name="dokladTyp" value={h.dokladTyp} onChange={zmen("dokladTyp")} className={tridy("dokladTyp")}>
-              <option>občanský průkaz</option>
-              <option>cestovní pas</option>
-              <option>povolení k pobytu</option>
-            </select>
-          </label>
-          <label className="block">
-            <span className="text-sm text-neutral-500">Číslo dokladu</span>
-            <input name="dokladCislo" value={h.dokladCislo} onChange={zmen("dokladCislo")} className={tridy("dokladCislo")} />
-          </label>
-        </div>
-      </section>
+          }
+        />
+        <Pole klic="datumPodaniZadosti" popis="Podání žádosti" sirka={3} typ="date" />
 
-      <section className="border-t border-neutral-200 pt-6 dark:border-neutral-800">
-        <h2 className="font-medium">Zákonný zástupce</h2>
-        <p className="mt-1 text-sm text-neutral-500">
-          Jen u nezletilých. U mladších 15 let musí být jeho podpis na žádosti úředně ověřený.
-        </p>
-        <div className="mt-4 grid gap-4 sm:grid-cols-2">
-          <label className="block sm:col-span-2">
-            <span className="text-sm text-neutral-500">Jméno a příjmení</span>
-            <input
-              name="zastupceJmeno"
-              value={h.zastupceJmeno}
-              onChange={zmen("zastupceJmeno")}
-              className={tridy("zastupceJmeno")}
-            />
-          </label>
-          <label className="block">
-            <span className="text-sm text-neutral-500">Vztah k žadateli</span>
-            <input
-              name="zastupceVztah"
-              placeholder="matka, otec…"
-              value={h.zastupceVztah}
-              onChange={zmen("zastupceVztah")}
-              className={tridy("zastupceVztah")}
-            />
-          </label>
-          <label className="block">
-            <span className="text-sm text-neutral-500">Telefon</span>
-            <input
-              type="tel"
-              name="zastupceTelefon"
-              value={h.zastupceTelefon}
-              onChange={zmen("zastupceTelefon")}
-              className={tridy("zastupceTelefon")}
-            />
-          </label>
-        </div>
-      </section>
-
-      <section className="border-t border-neutral-200 pt-6 dark:border-neutral-800">
-        <h2 className="font-medium">Výcvik</h2>
-        <p className="mt-1 text-sm text-neutral-500">
-          Spodní část žádosti — tuhle vyplňuje autoškola.
-        </p>
-        <div className="mt-4 grid gap-4 sm:grid-cols-2">
-          <label className="block">
-            <span className="text-sm text-neutral-500">
-              Skupina<span className="text-red-500"> *</span>
-            </span>
-            <select
-              name="skupina"
-              required
-              value={h.skupina}
-              onChange={zmen("skupina")}
-              className={tridy("skupina")}
-            >
-              {SKUPINY.map((s) => (
-                <option key={s}>{s}</option>
-              ))}
-            </select>
-
-            {posudek && !posudek.ok ? (
-              <span className="mt-1 block text-xs text-red-600 dark:text-red-400">
-                Na výcvik je ještě brzy — nejdřív {formatDatum(posudek.nejdriv)}.
-              </span>
-            ) : posudek?.dosazeniVeku &&
-              posudek.dosazeniVeku > (h.datumPodaniZadosti || dnesek()) ? (
-              <span className="mt-1 block text-xs text-amber-600 dark:text-amber-400">
-                Výcvik zahájit může, oprávnění získá až {formatDatum(posudek.dosazeniVeku)}.
-              </span>
-            ) : null}
-          </label>
-
-          <label className="block">
-            <span className="text-sm text-neutral-500">Druh</span>
-            <select
-              name="druh"
-              value={h.druh}
-              onChange={(e) => {
-                // U přezkoušení jde skoro vždycky o skupinu B, tak ji nabídneme.
-                if (e.target.value === "bodovy" && skupinyZPrukazu.length === 0) {
-                  setSkupinyZPrukazu(["B"]);
-                }
-                zmen("druh")(e);
-              }}
-              className={tridy("druh")}
-            >
-              <option value="prvni">první řidičské oprávnění</option>
-              <option value="rozsireni">rozšíření</option>
-              <option value="bodovy">přezkoušení (bodový)</option>
-            </select>
-          </label>
-
-          <label className="block">
-            <span className="text-sm text-neutral-500">Datum lékařského posudku</span>
-            <input
-              type="date"
-              name="lekarskyPosudek"
-              value={h.lekarskyPosudek}
-              onChange={zmen("lekarskyPosudek")}
-              className={tridy("lekarskyPosudek")}
-            />
-            <span className="mt-1 block text-xs text-neutral-500">
-              Při podání žádosti nesmí být starší tří měsíců (§ 13).
-            </span>
-          </label>
-
-          <label className="block">
-            <span className="text-sm text-neutral-500">Datum podání žádosti</span>
-            <input
-              type="date"
-              name="datumPodaniZadosti"
-              value={h.datumPodaniZadosti}
-              onChange={zmen("datumPodaniZadosti")}
-              className={tridy("datumPodaniZadosti")}
-            />
-          </label>
-
-          <label className="block">
-            <span className="text-sm text-neutral-500">
-              Úřad (ORP) podle bydliště žadatele<span className="text-red-500"> *</span>
-            </span>
-            <input
-              name="orpBydliste"
-              required
-              value={h.orpBydliste}
-              onChange={zmen("orpBydliste")}
-              className={tridy("orpBydliste")}
-            />
-            <span className="mt-1 block text-xs text-neutral-500">
-              Nemusí být stejný jako ten, u kterého jsi registrovaný.
-            </span>
-          </label>
-
-          <label className="block">
-            <span className="text-sm text-neutral-500">Učitel</span>
-            <select name="ucitelId" value={h.ucitelId} onChange={zmen("ucitelId")} className={tridy("ucitelId")}>
-              <option value="">zatím nepřidělen</option>
-              {ucitele.map((u) => (
-                <option key={u.id} value={u.id}>
-                  {u.jmeno} {u.prijmeni}
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
-      </section>
-
-      {h.druh !== "prvni" ? (
-        <section className="border-t border-neutral-200 pt-6 dark:border-neutral-800">
-          <h2 className="font-medium">Stávající řidičské oprávnění</h2>
-          <p className="mt-1 text-sm text-neutral-500">
-            {h.druh === "rozsireni"
-              ? "U rozšíření je potřeba vědět, co už žadatel má — jde to do podání na zkoušky."
-              : "U přezkoušení jde skoro vždycky o skupinu B; zkontroluj a případně uprav."}
+        {vekPriPodani !== null && vekPriPodani < 18 ? (
+          <p className="col-span-full rounded-md bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:bg-amber-950 dark:text-amber-200">
+            Žadateli je {vekPriPodani} let — žádost musí podepsat i zákonný zástupce
+            {vekPriPodani < 15 ? " a jeho podpis musí být úředně ověřený" : ""}. Zástupce
+            neevidujeme, hlídá to papír.
           </p>
+        ) : null}
 
-          <div className="mt-4 space-y-4">
-            <label className="block sm:max-w-xs">
-              <span className="text-sm text-neutral-500">
-                Číslo řidičského průkazu<span className="text-red-500"> *</span>
-              </span>
-              <input
-                name="ridicskyPrukazCislo"
-                required
-                value={h.ridicskyPrukazCislo}
-                onChange={zmen("ridicskyPrukazCislo")}
-                className={tridy("ridicskyPrukazCislo")}
-              />
-            </label>
+        {posudek ? (
+          <p
+            className={`col-span-full text-xs ${
+              !posudek.ok
+                ? "text-red-600 dark:text-red-400"
+                : posudek.dosazeniVeku &&
+                    posudek.dosazeniVeku > (h.datumPodaniZadosti || dnesek())
+                  ? "text-amber-600 dark:text-amber-400"
+                  : "hidden"
+            }`}
+          >
+            {!posudek.ok
+              ? `Na výcvik skupiny ${h.skupina} je ještě brzy — nejdřív ${formatDatum(posudek.nejdriv)}.`
+              : `Výcvik zahájit může, oprávnění získá až ${formatDatum(posudek.dosazeniVeku)}.`}
+          </p>
+        ) : null}
 
-            <fieldset>
-              <legend className="text-sm text-neutral-500">
+        {h.druh !== "prvni" ? (
+          <>
+            <Predel popis="Stávající řidičské oprávnění" />
+
+            <Pole klic="ridicskyPrukazCislo" popis="Číslo řidičského průkazu" sirka={2} />
+
+            <fieldset className="col-span-full sm:col-span-4">
+              <legend className="text-xs text-neutral-500">
                 Skupiny, které už má<span className="text-red-500"> *</span>
               </legend>
               <div
-                className={`mt-2 flex flex-wrap gap-2 rounded-lg border p-2 ${
-                  jeChybne("stavajiciSkupiny") ? chybny : "border-transparent"
+                className={`mt-0.5 flex flex-wrap gap-1.5 rounded-md border p-1.5 ${
+                  stav.pole === "stavajiciSkupiny" ? chybny : "border-transparent"
                 }`}
               >
                 {SKUPINY_V_PRUKAZU.map((s) => {
@@ -479,7 +338,7 @@ export default function FormularPrijeti({ ucitele }: { ucitele: Ucitel[] }) {
                   return (
                     <label
                       key={s}
-                      className={`cursor-pointer rounded-lg border px-3 py-1.5 text-sm ${
+                      className={`cursor-pointer rounded-md border px-2 py-1 text-xs ${
                         zaskrtnuta
                           ? "border-neutral-900 bg-neutral-900 text-white dark:border-white dark:bg-white dark:text-neutral-900"
                           : "border-neutral-300 dark:border-neutral-700"
@@ -502,30 +361,40 @@ export default function FormularPrijeti({ ucitele }: { ucitele: Ucitel[] }) {
                   );
                 })}
               </div>
-              <span className="mt-1 block text-xs text-neutral-500">
-                Klikni na skupiny, které má žadatel v průkazu.
-              </span>
             </fieldset>
-          </div>
-        </section>
-      ) : null}
+          </>
+        ) : null}
+      </div>
 
       {stav.chyba ? (
-        <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">
+        <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">
           {stav.chyba}
         </p>
       ) : null}
 
-      <div className="flex items-center gap-4 border-t border-neutral-200 pt-6 dark:border-neutral-800">
+      <div className="flex items-center gap-3 border-t border-neutral-200 pt-4 dark:border-neutral-800">
         <button
           type="submit"
           disabled={probiha}
-          className="rounded-lg bg-neutral-900 px-4 py-2.5 text-base font-medium text-white disabled:opacity-50 dark:bg-white dark:text-neutral-900"
+          className="rounded-md bg-neutral-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50 dark:bg-white dark:text-neutral-900"
         >
           {probiha ? "Zakládám…" : "Přijmout žáka"}
         </button>
-        <p className="text-sm text-neutral-500">Evidenční číslo přidělí systém sám.</p>
+        <p className="text-xs text-neutral-500">Evidenční číslo přidělí systém sám.</p>
       </div>
     </form>
   );
 }
+
+/**
+ * Šířky sloupců vypsané naplno.
+ * Tailwind hledá názvy tříd v textu souboru, takže skládat je za běhu
+ * (`sm:col-span-${n}`) nefunguje — tyhle třídy by se do stylů nedostaly.
+ */
+const sloupce: Record<number, string> = {
+  1: "sm:col-span-1",
+  2: "sm:col-span-2",
+  3: "sm:col-span-3",
+  4: "sm:col-span-4",
+  6: "sm:col-span-6",
+};

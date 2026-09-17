@@ -21,10 +21,10 @@ export default async function NovyZak() {
     <main>
       <h1 className="text-lg font-semibold">Přijetí žáka</h1>
       <p className="mt-1 text-sm text-neutral-500">
-        Pořadí polí odpovídá tiskopisu žádosti, ať se dá opisovat shora dolů.
+        Pořadí polí odpovídá tiskopisu žádosti. Hvězdička znamená povinné.
       </p>
 
-      <div className="mt-6">
+      <div className="mt-4">
         <FormularPrijeti ucitele={seznam} />
       </div>
     </main>

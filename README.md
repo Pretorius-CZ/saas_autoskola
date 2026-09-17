@@ -221,37 +221,55 @@ Proto ty soubory u sebe.
 
 - projekt, databáze v Neonu (Frankfurt), migrace
 - nasazení na Vercelu, běží na vlastní adrese
-- Sentry v EU, ověřené odesláním skutečné chyby,
-  vypnuté posílání osobních údajů a obsahu formulářů
+- Sentry v EU, vypnuté posílání osobních údajů a obsahu formulářů
 - zálohování a **ověřená** obnova
+- veřejná stránka `/zdravi` — stav systému bez přihlášení
 
 **Autoškola**
 
 - přihlašování e-mailem a heslem, registrace zavřená
-- karta autoškoly, čtyři učitelé, čtyři vozidla
-- hlídání propadajících lhůt (osvědčení, zdravotní způsobilost, STK)
+- karta autoškoly, učitelé, vozidla, hlídání propadajících lhůt
 - izolace dat po autoškolách vynucená databází
+- **přijetí žáka**: evidenční číslo, čtyři zákonné lhůty, věkové meze,
+  dopočet data narození z rodného čísla, stávající oprávnění u rozšíření
+
+## Rozhodnutí, která se špatně mění
+
+Tady jsou věci, u kterých se vyplatí vědět proč — jinak je někdo
+(nejspíš já za půl roku) „opraví" zpátky.
+
+**Žák a výcvik jsou dvě tabulky.** Člověk je jeden záznam napořád, výcvik
+má vlastní evidenční číslo a vlastní lhůty. Kdo se vrátí na rozšíření,
+dostane nové číslo, ne to staré.
+
+**Evidenční číslo přiděluje zamykaná tabulka `cisleni_rady`**, ne
+„největší plus jedna". Dva současné zápisy by jinak dostaly stejné číslo.
+
+**Stav výcviku se neukládá, odvozuje se z dat.** Nemůže tak nastat výcvik,
+který je „ve výcviku" a zároveň má datum ukončení.
+
+**Zákonného zástupce neevidujeme.** Je to podmínka pro podpis na žádosti,
+ne údaj, se kterým pracujeme — a je to osobní údaj někoho, kdo náš žák
+není. Systém jen upozorní, že podpis je potřeba.
+
+**Počítání s daty je jen v `src/lib/datum.ts`.** Nikde jinde nesmí být
+`toISOString()` — převádí na světový čas a v létě posouvá datum o den zpět.
+Jednou už nás to stálo hodinu.
+
+**Rodné číslo se ukládá zašifrované** (`SIFROVACI_KLIC`), zvlášť se vede
+jen poslední čtyřčíslí kvůli hledání. Kontrolní součet je **dočasně
+vypnutý** — přepínač `KONTROLA_KONTROLNIHO_SOUCTU` v `src/lib/rodne-cislo.ts`.
+Před prvním skutečným žákem ho zapni.
+
+**Věkové meze** jsou v `src/lib/vek.ts`. Počítá se s nejnižší zákonnou
+cestou: B jako 17 (kvůli B17), A jako 20 (po dvou letech s A2). Výcvik smí
+začít 18 měsíců před dosažením věku.
 
 ## Co zbývá
 
 - zakládání účtů učitelům a žákům (dveře jsou zavřené, klíč nemá nikdo)
-- úprava karet učitelů a vozidel v aplikaci (zatím jen přes seed)
+- úprava karet učitelů, vozidel a žáků v aplikaci
+- tisk žádosti do úředního tiskopisu
+- podání na zkoušky (XML pro eTesty + PDF)
+- výuka a výcvik: třídní kniha, kniha jízd, průkaz žadatele
 - obnova zapomenutého hesla (potřebuje odesílání e-mailů)
-
----
-
-## Dvě rozhodnutí, která nejdou vzít zpět
-
-- **Region databáze i Sentry musí být v EU** (Neon: Europe/Frankfurt).
-  Vedeme rodná čísla a doklady totožnosti. Region se u obou mění jedině
-  založením nového účtu a stěhováním dat.
-- **Databáze zůstává přenositelná.** Proto obyčejný postgresový ovladač
-  a žádné funkce specifické pro jednoho poskytovatele.
-
----
-
-## Kam dál
-
-Podrobné zadání, datový model, právní rozbor a plán třinácti týdnů jsou
-v dokumentech k projektu (Zadání MVP, Přijetí žáka, Výuka a výcvik,
-Zkoušky a přihláška, Anatomie nepřehlednosti, Autoškola jako SaaS).
