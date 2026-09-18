@@ -1,13 +1,14 @@
 import Link from "next/link";
-import { and, asc, eq, gte, lte, ne } from "drizzle-orm";
+import { and, asc, eq, gte, inArray, lte, ne } from "drizzle-orm";
 import { proAutoskolu } from "@/lib/db-tenant";
-import { terminy, ucitele, vozidla, vycviky, zaci } from "@/db/schema";
+import { podpisy, terminy, ucitele, vozidla, vycviky, zaci } from "@/db/schema";
 import { vyzadujPrihlaseni } from "@/lib/relace";
 import { formatDatum } from "@/lib/datum";
 import { nazevDne, rozsah as casovyRozsah } from "@/lib/cas";
 import { naHodiny } from "@/lib/osnova";
 import Obdobi, { jednaHodnota, okamziky, rozsahZAdresy } from "../obdobi";
 import Tisk from "../tisk";
+import PodpisNahled from "@/components/podpis-nahled";
 
 /**
  * Kniha jízd — záznam o výcviku.
@@ -71,12 +72,38 @@ export default async function KnihaJizd({
       )
       .orderBy(asc(terminy.zacatek));
 
-    return { uciteleSeznam, vozidlaSeznam, seznam };
+    const idcka = seznam.map((x) => x.t.id);
+    const podpisySeznam =
+      idcka.length === 0
+        ? []
+        : await tx
+            .select({ terminId: podpisy.terminId, kresba: podpisy.kresba })
+            .from(podpisy)
+            .where(
+              and(
+                eq(podpisy.tenantId, kdo.autoskola.id),
+                inArray(podpisy.terminId, idcka),
+              ),
+            );
+
+    return { uciteleSeznam, vozidlaSeznam, seznam, podpisySeznam };
   });
 
-  const { uciteleSeznam, vozidlaSeznam, seznam } = data;
+  const { uciteleSeznam, vozidlaSeznam, seznam, podpisySeznam } = data;
+
+  const podpisTerminu = new Map(podpisySeznam.map((p) => [p.terminId, p.kresba]));
 
   const hodinCelkem = seznam.reduce((s, x) => s + naHodiny(x.t.delkaMinut), 0);
+
+  // Sčítají se jen jízdy, které mají obě čísla. Chybějící se nedopočítává —
+  // odhad v knize jízd je horší než přiznaná mezera.
+  const kmCelkem = seznam.reduce(
+    (s, x) =>
+      x.t.kmZacatek !== null && x.t.kmKonec !== null
+        ? s + (x.t.kmKonec - x.t.kmZacatek)
+        : s,
+    0,
+  );
 
   return (
     <main className="space-y-4">
@@ -98,6 +125,7 @@ export default async function KnihaJizd({
           {formatDatum(r.od)} – {formatDatum(r.do)} · {seznam.length}{" "}
           {seznam.length === 1 ? "jízda" : seznam.length < 5 ? "jízdy" : "jízd"} ·{" "}
           {Math.round(hodinCelkem * 10) / 10} h
+          {kmCelkem > 0 ? ` · ${kmCelkem} km` : ""}
         </p>
       </div>
 
@@ -141,7 +169,14 @@ export default async function KnihaJizd({
                 <th className="py-2 pr-3 text-xs font-medium text-neutral-500">Žák</th>
                 <th className="py-2 pr-3 text-xs font-medium text-neutral-500">Učitel</th>
                 <th className="py-2 pr-3 text-xs font-medium text-neutral-500">Vozidlo</th>
-                <th className="py-2 text-xs font-medium text-neutral-500">Místo / téma</th>
+                <th className="py-2 pr-3 text-xs font-medium text-neutral-500">
+                  Tachometr
+                </th>
+                <th className="py-2 pr-3 text-xs font-medium text-neutral-500">Ujeto</th>
+                <th className="py-2 pr-3 text-xs font-medium text-neutral-500">
+                  Místo / téma
+                </th>
+                <th className="py-2 text-xs font-medium text-neutral-500">Podpis</th>
               </tr>
             </thead>
             <tbody>
@@ -189,8 +224,27 @@ export default async function KnihaJizd({
                       </span>
                     )}
                   </td>
-                  <td className="py-1.5">
+                  <td className="whitespace-nowrap py-1.5 pr-3 tabular-nums">
+                    {x.t.kmZacatek !== null && x.t.kmKonec !== null ? (
+                      `${x.t.kmZacatek} → ${x.t.kmKonec}`
+                    ) : x.t.kmZacatek !== null ? (
+                      <span className="text-amber-600 dark:text-amber-400">
+                        {x.t.kmZacatek} → ?
+                      </span>
+                    ) : (
+                      <span className="text-neutral-400">—</span>
+                    )}
+                  </td>
+                  <td className="py-1.5 pr-3 tabular-nums">
+                    {x.t.kmZacatek !== null && x.t.kmKonec !== null
+                      ? `${x.t.kmKonec - x.t.kmZacatek} km`
+                      : "—"}
+                  </td>
+                  <td className="py-1.5 pr-3">
                     {[x.t.misto, x.t.tema].filter(Boolean).join(" · ") || "—"}
+                  </td>
+                  <td className="py-1.5">
+                    <PodpisNahled kresba={podpisTerminu.get(x.t.id) ?? null} vyska={36} />
                   </td>
                 </tr>
               ))}

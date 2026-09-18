@@ -53,6 +53,12 @@ export const NAZVY_POLI: Record<string, string> = {
   user_id: "Přihlášení",
   platnost_do: "Pozvánka platí do",
   pouzito_kdy: "Pozvánka použita",
+  kresba: "Podpis",
+  podepsano_kdy: "Podepsáno",
+  zahajeno_kdy: "Jízda zahájena",
+  ukonceno_kdy: "Jízda ukončena",
+  km_zacatek: "Tachometr na začátku",
+  km_konec: "Tachometr na konci",
   // učitelé
   cislo_osvedceni: "Číslo osvědčení",
   osvedceni_platnost_do: "Osvědčení platí do",
@@ -91,6 +97,7 @@ export const NAZVY_TABULEK: Record<string, string> = {
   tenants: "autoškola",
   poznamky_kurzu: "poznámka v třídní knize",
   pozvanky: "pozvánka učitele",
+  podpisy: "podpis u jízdy",
 };
 
 /** Sloupce, jejichž hodnota je odkaz jinam — je potřeba ji přeložit na název. */

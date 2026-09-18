@@ -1,6 +1,7 @@
-import { and, asc, eq, gte, ne } from "drizzle-orm";
+import Link from "next/link";
+import { and, asc, eq, gte, inArray, ne } from "drizzle-orm";
 import { proAutoskolu } from "@/lib/db-tenant";
-import { kurzy, terminy, ucitele, vozidla, vycviky, zaci } from "@/db/schema";
+import { kurzy, podpisy, terminy, ucitele, vozidla, vycviky, zaci } from "@/db/schema";
 import { vyzadujPrihlaseni } from "@/lib/relace";
 import { nazevDne, rozsah } from "@/lib/cas";
 import { PREDMETY } from "@/lib/osnova";
@@ -55,7 +56,22 @@ export default async function MojeTerminy() {
       )
       .orderBy(asc(terminy.zacatek));
 
-    return { ucitel, seznam };
+    // Které jízdy už jsou podepsané — ať učitel vidí, co má ještě dodělat.
+    const idcka = seznam.map((x) => x.t.id);
+    const podepsane =
+      idcka.length === 0
+        ? []
+        : await tx
+            .select({ terminId: podpisy.terminId })
+            .from(podpisy)
+            .where(
+              and(
+                eq(podpisy.tenantId, kdo.autoskola.id),
+                inArray(podpisy.terminId, idcka),
+              ),
+            );
+
+    return { ucitel, seznam, podepsane };
   });
 
   if (!data) {
@@ -70,7 +86,8 @@ export default async function MojeTerminy() {
     );
   }
 
-  const { seznam } = data;
+  const { seznam, podepsane } = data;
+  const jePodepsano = new Set(podepsane.map((p) => p.terminId));
 
   // Seskupení po dnech. Učitel přemýšlí ve dnech, ne v seznamu termínů.
   const dny = new Map<string, typeof seznam>();
@@ -108,19 +125,38 @@ export default async function MojeTerminy() {
               <ul className="mt-1 divide-y divide-neutral-200 dark:divide-neutral-800">
                 {terminyDne.map((x) => (
                   <li key={x.t.id} className="py-2.5">
-                    <p className="text-sm">
-                      <span className="tabular-nums font-medium">
-                        {rozsah(x.t.zacatek, x.t.delkaMinut)}
-                      </span>
-                      {x.t.stav === "probehlo" ? (
-                        <span className="ml-2 text-xs text-emerald-600 dark:text-emerald-400">
-                          proběhlo
+                    <Link href={`/ucitel/${x.t.id}`} className="block">
+                      <p className="text-sm">
+                        <span className="tabular-nums font-medium">
+                          {rozsah(x.t.zacatek, x.t.delkaMinut)}
                         </span>
-                      ) : null}
-                    </p>
-                    <p className="text-sm font-medium">{popis(x)}</p>
-                    <p className="text-xs text-neutral-500">
-                      {[
+                        {x.t.druh === "jizda" ? (
+                          x.t.ukoncenoKdy ? (
+                            <span className="ml-2 text-xs text-emerald-600 dark:text-emerald-400">
+                              hotovo
+                            </span>
+                          ) : x.t.zahajenoKdy ? (
+                            <span className="ml-2 text-xs text-amber-600 dark:text-amber-400">
+                              jede — chybí ukončit
+                            </span>
+                          ) : jePodepsano.has(x.t.id) ? (
+                            <span className="ml-2 text-xs text-amber-600 dark:text-amber-400">
+                              podepsáno — chybí zahájit
+                            </span>
+                          ) : (
+                            <span className="ml-2 text-xs text-neutral-500">
+                              čeká na podpis
+                            </span>
+                          )
+                        ) : x.t.stav === "probehlo" ? (
+                          <span className="ml-2 text-xs text-emerald-600 dark:text-emerald-400">
+                            proběhlo
+                          </span>
+                        ) : null}
+                      </p>
+                      <p className="text-sm font-medium">{popis(x)}</p>
+                      <p className="text-xs text-neutral-500">
+                        {[
                         x.t.druh === "jizda" && x.evidencniCislo
                           ? `č. ${x.evidencniCislo}`
                           : x.kurz?.nazev,
@@ -130,7 +166,8 @@ export default async function MojeTerminy() {
                       ]
                         .filter(Boolean)
                         .join(" · ")}
-                    </p>
+                      </p>
+                    </Link>
                   </li>
                 ))}
               </ul>
@@ -140,7 +177,8 @@ export default async function MojeTerminy() {
       )}
 
       <p className="mt-6 text-xs text-neutral-500">
-        Zapisování docházky a podpisy sem přibudou v dalším kroku.
+        Klepnutím na termín otevřeš podrobnosti. U jízdy je tam postup:
+        podpis žáka, zahájení se stavem tachometru a na konci ukončení.
       </p>
     </main>
   );

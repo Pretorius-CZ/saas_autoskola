@@ -29,6 +29,7 @@ const TABULKY = [
   "ucast",
   "poznamky_kurzu",
   "pozvanky",
+  "podpisy",
   "zmeny",
 ];
 

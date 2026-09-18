@@ -386,6 +386,17 @@ export const terminy = pgTable(
     poznamka: text("poznamka"),
     misto: text("misto"),
 
+    // --- průběh jízdy (u konzultací zůstává prázdné) ------------------
+    //
+    // Podpis, zahájení a ukončení jsou tři různé věci a pletly by se,
+    // kdyby se slily do jedné. Podpis znamená, že žák přišel; zahájení
+    // že se vyjelo a s jakým stavem tachometru; ukončení že se vrátilo
+    // a s jakým. Teprve ukončení dělá z naplánované jízdy proběhlou.
+    zahajenoKdy: timestamp("zahajeno_kdy", { withTimezone: true }),
+    ukoncenoKdy: timestamp("ukonceno_kdy", { withTimezone: true }),
+    kmZacatek: integer("km_zacatek"),
+    kmKonec: integer("km_konec"),
+
     // 'planovano' | 'probehlo' | 'zruseno'
     stav: text("stav").notNull().default("planovano"),
 
@@ -501,6 +512,53 @@ export const pozvanky = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [uniqueIndex("pozvanka_otisk_unikat").on(t.tokenOtisk)],
+);
+
+/* ------------------------------------------------------------------ *
+ * PODPISY U JÍZD
+ *
+ * Žák podepíše na telefonu učitele, že jízda proběhla. Za učitele mluví
+ * to, že je v tu chvíli přihlášený — jeho identita je v zápisu, podepisuje
+ * se jen žák.
+ *
+ * Kresba se ukládá jako souřadnice tahů (JSON), ne jako obrázek. Je to
+ * řádově menší, na papíře to zůstane ostré v jakékoli velikosti a do
+ * databáze se tím nedostane nic, co by prohlížeč mohl spustit.
+ *
+ * Kresbu jde jednou smazat (kdyby se řešila lhůta nebo místo), aniž by
+ * zmizel záznam o tom, že se žák podepsal. Proto je "kresba" zvlášť a
+ * smí být prázdná.
+ * ------------------------------------------------------------------ */
+
+export const podpisy = pgTable(
+  "podpisy",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "cascade" }),
+
+    terminId: uuid("termin_id")
+      .notNull()
+      .references(() => terminy.id, { onDelete: "cascade" }),
+    vycvikId: uuid("vycvik_id")
+      .notNull()
+      .references(() => vycviky.id, { onDelete: "cascade" }),
+
+    /** U koho se podepisoval — kdo byl v tu chvíli přihlášený. */
+    ucitelId: uuid("ucitel_id").references(() => ucitele.id, { onDelete: "set null" }),
+
+    /** Souřadnice tahů jako JSON. Smí být prázdná, záznam zůstává. */
+    kresba: text("kresba"),
+
+    podepsanoKdy: timestamp("podepsano_kdy", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("podpis_jednou").on(t.terminId, t.vycvikId)],
 );
 
 export type Kurz = typeof kurzy.$inferSelect;

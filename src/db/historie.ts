@@ -29,6 +29,7 @@ const TABULKY = [
   "ucast",
   "poznamky_kurzu",
   "pozvanky",
+  "podpisy",
 ];
 
 const url = process.env.DATABASE_URL_OWNER ?? process.env.DATABASE_URL;
@@ -56,7 +57,7 @@ declare
   kdo text := nullif(current_setting('app.uzivatel_id', true), '');
   -- Hodnoty těchto sloupců se do historie NEPÍŠOU. Zaznamená se jen to,
   -- že se změnily. Historie nesmí být místem, kde leží rodné číslo čitelně.
-  citliva text[] := array['rodne_cislo_sifr', 'logo_data'];
+  citliva text[] := array['rodne_cislo_sifr', 'logo_data', 'kresba'];
   -- Technické sloupce, jejichž změna nic neříká.
   vynechat text[] := array['created_at', 'updated_at'];
 begin
