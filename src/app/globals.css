@@ -79,13 +79,31 @@ body {
 
 .tlacitko-vedlejsi {
   border: 1px solid;
-  border-color: color-mix(in oklab, var(--akcent) 35%, transparent);
+  border-color: color-mix(in oklab, var(--akcent) 50%, transparent);
   color: inherit;
   border-radius: 0.375rem;
   padding: 0.5rem 1rem;
   font-size: 0.875rem;
   font-weight: 500;
   line-height: 1.25rem;
+}
+
+.tlacitko-vedlejsi:hover {
+  background: color-mix(in oklab, var(--akcent) 10%, transparent);
+}
+
+/*
+ * Políčko, které je špatně vyplněné.
+ *
+ * Je to tady, a ne rozepsané u každého formuláře, kvůli jedné pasti:
+ * když se u vstupu vypíše "border-red-500" vedle "dark:border-neutral-700",
+ * v tmavém motivu vyhraje ta druhá, protože ji Tailwind zapisuje později.
+ * Políčko pak mělo zčervenat a nezčervenalo — na světlém pozadí to
+ * fungovalo, na tmavém ne, a nikdo netušil proč.
+ */
+.pole-chyba {
+  border-color: #ef4444;
+  box-shadow: 0 0 0 1px #ef4444;
 }
 
 .odkaz-akcent {

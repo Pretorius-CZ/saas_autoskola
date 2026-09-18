@@ -55,7 +55,7 @@ function Uprava({ kurz, zavri }: { kurz: Kurz; zavri: () => void }) {
   }, [stav]);
 
   const tridy = (klic: string) =>
-    `${vstup} ${stav.pole === klic ? "border-red-500" : ""}`;
+    `${vstup} ${stav.pole === klic ? "pole-chyba" : ""}`;
 
   return (
     <form action={akce} className="mt-2">
@@ -148,10 +148,7 @@ function Slozeni({ kurz, zaci }: { kurz: Kurz; zaci: Zak[] }) {
       </p>
 
       {!otevreno ? (
-        <button
-          onClick={() => setOtevreno(true)}
-          className="mt-1 text-sm text-neutral-500 underline-offset-4 hover:underline"
-        >
+        <button onClick={() => setOtevreno(true)} className="tlacitko-vedlejsi mt-1">
           Upravit složení
         </button>
       ) : (
@@ -233,10 +230,7 @@ function KurzPolozka({ kurz, zaci }: { kurz: Kurz; zaci: Zak[] }) {
       ) : (
         <>
           <Slozeni kurz={kurz} zaci={zaci} />
-          <button
-            onClick={() => setUpravuji(true)}
-            className="mt-1 ml-0 text-sm text-neutral-500 underline-offset-4 hover:underline"
-          >
+          <button onClick={() => setUpravuji(true)} className="tlacitko-vedlejsi mt-1">
             Upravit kurz
           </button>
         </>

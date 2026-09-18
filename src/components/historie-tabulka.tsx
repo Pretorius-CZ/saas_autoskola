@@ -10,6 +10,8 @@ export type RadekHistorie = {
   id: string;
   kdy: Date;
   tabulka: string;
+  /** Kterého záznamu se změna týká. Potřebné jen ve společné historii. */
+  zaznamId?: string | null;
   akce: string;
   pole: string | null;
   hodnotaPred: string | null;
@@ -22,15 +24,21 @@ export type RadekHistorie = {
  *
  * `nazvy` překládá odkazy (dlouhá náhodná čísla) na jména — bez toho by
  * v tabulce stálo "kurz_id: 8f3c… → a91b…", což nikomu nic neřekne.
+ *
+ * `koho` se předává jen ve společné historii za celou evidenci, kde na
+ * jednom místě leží změny víc záznamů. Pak první sloupec neříká "učitel",
+ * což by u seznamu učitelů bylo k ničemu, ale o kterého učitele jde.
  */
 export default function HistorieTabulka({
   radky,
   nazvy,
   lide,
+  koho,
 }: {
   radky: RadekHistorie[];
   nazvy: Map<string, string>;
   lide: Map<string, string>;
+  koho?: Map<string, string>;
 }) {
   function hodnota(v: string | null, pole: string | null) {
     if (v === null || v === "") return <span className="text-neutral-400">—</span>;
@@ -51,7 +59,9 @@ export default function HistorieTabulka({
         <thead>
           <tr className="border-b border-neutral-200 text-left dark:border-neutral-800">
             <th className="py-2 pr-3 text-xs font-medium text-neutral-500">Kdy</th>
-            <th className="py-2 pr-3 text-xs font-medium text-neutral-500">Kde</th>
+            <th className="py-2 pr-3 text-xs font-medium text-neutral-500">
+              {koho ? "Koho se týká" : "Kde"}
+            </th>
             <th className="py-2 pr-3 text-xs font-medium text-neutral-500">Údaj</th>
             <th className="py-2 pr-3 text-xs font-medium text-neutral-500">Původní</th>
             <th className="py-2 pr-3 text-xs font-medium text-neutral-500">Nová</th>
@@ -65,7 +75,9 @@ export default function HistorieTabulka({
                 {r.kdy.toLocaleString("cs-CZ")}
               </td>
               <td className="py-1.5 pr-3 text-neutral-500">
-                {NAZVY_TABULEK[r.tabulka] ?? r.tabulka}
+                {koho
+                  ? (koho.get(r.zaznamId ?? "") ?? "smazaný záznam")
+                  : (NAZVY_TABULEK[r.tabulka] ?? r.tabulka)}
               </td>
               <td className="py-1.5 pr-3">
                 {r.akce === "zmena"

@@ -50,6 +50,19 @@ export const NAZVY_POLI: Record<string, string> = {
   barva: "Barva",
   logo_data: "Logo",
   aktivni: "Aktivní",
+  // učitelé
+  cislo_osvedceni: "Číslo osvědčení",
+  osvedceni_platnost_do: "Osvědčení platí do",
+  zdravotni_zpusobilost_do: "Zdravotní způsobilost do",
+  skupiny: "Smí učit skupiny",
+  bankovni_ucet: "Bankovní účet",
+
+  // vozidla
+  znacka: "Značka",
+  typ: "Typ",
+  rz: "Registrační značka",
+  stk_do: "STK do",
+
   predmet: "Předmět osnovy",
   zacatek: "Začátek",
   delka_minut: "Délka (minut)",

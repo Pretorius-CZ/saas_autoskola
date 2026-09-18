@@ -52,7 +52,9 @@ function slouc(pocatecni?: Partial<HodnotyZaka>): Hodnoty {
 const vstup =
   "w-full rounded-md border bg-white px-2.5 py-1.5 text-sm outline-none dark:bg-neutral-900";
 const bezny = "border-neutral-300 focus:border-neutral-500 dark:border-neutral-700";
-const chybny = "border-red-500 focus:border-red-600 dark:border-red-500";
+// Červené ohraničení je v globals.css jako .pole-chyba — v tmavém
+// motivu přebíjely tailwindovské dark: varianty obyčejné border-red-500.
+const chybny = "pole-chyba";
 
 /** Tenký předěl místo nadpisu sekce — odděluje, ale nezabírá řádek navíc. */
 function Predel({ popis }: { popis: string }) {
