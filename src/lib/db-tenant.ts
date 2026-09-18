@@ -34,3 +34,32 @@ export async function proAutoskolu<T>(
     return prace(tx);
   });
 }
+
+/**
+ * Čtení pro veřejný rozvrh žáka.
+ *
+ * Žák nemá účet, takže nemáme koho se zeptat, do které autoškoly patří.
+ * Místo toho se databázi řekne token z odkazu a ta sama vydá jen to, co
+ * k němu patří — jeden výcvik, jeho žáka a jeho termíny. I kdybych na
+ * téhle stránce napsal dotaz špatně, cizí data z ní nevypadnou.
+ *
+ * Token musí být UUID: kdyby se do nastavení dostal jiný text, databáze
+ * by na přetypování v pravidle spadla a chyba by vypadala záhadně.
+ */
+export function jeToken(token: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(token);
+}
+
+export async function proRozvrh<T>(
+  token: string,
+  prace: (tx: Transakce) => Promise<T>,
+): Promise<T> {
+  const db = getDb();
+  if (!db) throw new Error("Databáze není dostupná.");
+  if (!jeToken(token)) throw new Error("Neplatný odkaz.");
+
+  return db.transaction(async (tx) => {
+    await tx.execute(sql`select set_config('app.rozvrh_token', ${token}, true)`);
+    return prace(tx);
+  });
+}

@@ -17,7 +17,9 @@ import {
 } from "@/lib/osnova";
 import { denAMesic, nazevDne, rozsah } from "@/lib/cas";
 import { desifruj } from "@/lib/sifrovani";
+import { adresaAplikace } from "@/lib/env";
 import Prubeh from "./prubeh";
+import OdkazNaRozvrh from "./odkaz";
 import Zruseni from "./zruseni";
 
 export const dynamic = "force-dynamic";
@@ -316,20 +318,16 @@ export default async function KartaZaka({
                 const potreba = konzultaciZaPredmet(p.hodin);
                 const hotovo = mel >= potreba;
                 return (
-                  // Splněný předmět zezelená celý, i s názvem. Zlomek
-                  // "2 / 1" se četl jako skóre, které nemůže přesáhnout
-                  // jedničku — proto se tu píšou hodiny a slovo.
-                  <li
-                    key={p.klic}
-                    className={
-                      hotovo
-                        ? "flex justify-between gap-3 text-sm text-emerald-600 dark:text-emerald-400"
-                        : "flex justify-between gap-3 text-sm"
-                    }
-                  >
-                    <span>{p.nazev}</span>
-                    <span className="tabular-nums">
-                      {hotovo ? `splněno · ${mel} h` : `${mel} h z ${potreba} h`}
+                  <li key={p.klic} className="flex justify-between gap-3 text-sm">
+                    <span className={hotovo ? "text-neutral-500" : ""}>{p.nazev}</span>
+                    <span
+                      className={
+                        hotovo
+                          ? "tabular-nums text-emerald-600 dark:text-emerald-400"
+                          : "tabular-nums"
+                      }
+                    >
+                      {mel} / {potreba}
                     </span>
                   </li>
                 );
@@ -337,6 +335,12 @@ export default async function KartaZaka({
             </ul>
           </div>
         ) : null}
+
+        <OdkazNaRozvrh
+          adresa={`${adresaAplikace()}/rozvrh/${v.tokenRozvrhu}`}
+          komu={z.email}
+          jmeno={z.jmeno}
+        />
 
         <div className="col-span-full">
           <p className="text-xs text-neutral-500">Nejbližší termíny</p>

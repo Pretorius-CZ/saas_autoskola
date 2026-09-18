@@ -280,6 +280,14 @@ export const vycviky = pgTable(
 
     poznamka: text("poznamka"),
 
+    // Adresa osobního rozvrhu, kterou žák dostane do e-mailu.
+    //
+    // Žáci nemají účty — vědomé rozhodnutí. Kdo odkaz dostane, ten rozvrh
+    // uvidí; není to ochrana proti někomu, kdo se cíleně snaží. Proto na
+    // té stránce není nic, co by v rozvrhu být nemuselo: žádné rodné
+    // číslo, adresa ani telefon.
+    tokenRozvrhu: uuid("token_rozvrhu").notNull().defaultRandom(),
+
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
@@ -287,6 +295,7 @@ export const vycviky = pgTable(
     // Dvě stejná evidenční čísla v jedné autoškole být nesmí — je to
     // číslo řádku v evidenční knize. Hlídá to databáze, ne jen kód.
     uniqueIndex("vycviky_evidencni_cislo_unikat").on(t.tenantId, t.evidencniCislo),
+    uniqueIndex("vycviky_token_rozvrhu_unikat").on(t.tokenRozvrhu),
   ],
 );
 

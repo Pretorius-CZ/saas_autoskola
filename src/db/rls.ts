@@ -90,6 +90,103 @@ async function over(tabulka: string) {
   }
 }
 
+/**
+ * Pravidla pro veřejný rozvrh žáka.
+ *
+ * Žák nemá účet. Do e-mailu dostane odkaz s tokenem a databáze podle něj
+ * vydá jen jeho výcvik, jeho samotného a jeho termíny — nic víc. Kdyby
+ * byla stránka rozvrhu napsaná špatně, cizí data z ní stejně nevypadnou.
+ *
+ * Pravidla jsou "permissive", takže se s izolací po autoškolách sčítají:
+ * přihlášený uživatel vidí dál svoje, žák s odkazem vidí svůj rozvrh.
+ */
+const TOKEN = `nullif(current_setting('app.rozvrh_token', true), '')::uuid`;
+
+async function zapniRozvrh() {
+  await vlastnik.query(`drop policy if exists "rozvrh_vycvik" on "vycviky"`);
+  await vlastnik.query(`
+    create policy "rozvrh_vycvik" on "vycviky" for select
+      using (token_rozvrhu = ${TOKEN})
+  `);
+
+  await vlastnik.query(`drop policy if exists "rozvrh_zak" on "zaci"`);
+  await vlastnik.query(`
+    create policy "rozvrh_zak" on "zaci" for select
+      using (exists (
+        select 1 from vycviky v
+         where v.zak_id = zaci.id
+           and v.token_rozvrhu = ${TOKEN}))
+  `);
+
+  // Jízdy visí na výcviku, teorie na kurzu. Žák má vidět obojí — pro něj
+  // je to jeden rozvrh.
+  await vlastnik.query(`drop policy if exists "rozvrh_termin" on "terminy"`);
+  await vlastnik.query(`
+    create policy "rozvrh_termin" on "terminy" for select
+      using (exists (
+        select 1 from vycviky v
+         where v.token_rozvrhu = ${TOKEN}
+           and (terminy.vycvik_id = v.id
+                or (terminy.druh = 'teorie'
+                    and v.kurz_id is not null
+                    and terminy.kurz_id = v.kurz_id))))
+  `);
+
+  // Učitele smí žák vidět jen u termínů, které sám vidí. O tom, které to
+  // jsou, rozhoduje pravidlo o řádek výš — ne tenhle dotaz.
+  await vlastnik.query(`drop policy if exists "rozvrh_ucitel" on "ucitele"`);
+  await vlastnik.query(`
+    create policy "rozvrh_ucitel" on "ucitele" for select
+      using (${TOKEN} is not null
+             and exists (select 1 from terminy t where t.ucitel_id = ucitele.id))
+  `);
+
+  console.log("Zapnuto pravidlo pro veřejný rozvrh žáka.");
+}
+
+/**
+ * Ověří, že odkaz na rozvrh ukáže jednoho žáka — a ne celou evidenci.
+ * Bez tohohle měření je pravidlo jen dobrý úmysl.
+ */
+async function overRozvrh() {
+  const { rows: vzorek } = await vlastnik.query(
+    "select token_rozvrhu from vycviky limit 1",
+  );
+  if (vzorek.length === 0) {
+    console.log("rozvrh: v databázi zatím není žádný výcvik, nemám co změřit.");
+    return;
+  }
+
+  const { rows: vsichni } = await vlastnik.query("select count(*)::int as pocet from zaci");
+  const token = vzorek[0].token_rozvrhu;
+
+  const klient = await aplikace.connect();
+  try {
+    await klient.query("begin");
+    await klient.query("select set_config('app.rozvrh_token', $1, true)", [token]);
+
+    const v = await klient.query("select count(*)::int as pocet from vycviky");
+    const z = await klient.query("select count(*)::int as pocet from zaci");
+    const t = await klient.query("select count(*)::int as pocet from terminy");
+
+    await klient.query("commit");
+
+    if (v.rows[0].pocet !== 1 || z.rows[0].pocet !== 1) {
+      throw new Error(
+        `rozvrh: s odkazem je vidět ${v.rows[0].pocet} výcviků a ${z.rows[0].pocet} žáků. ` +
+          "Mělo by být přesně po jednom.",
+      );
+    }
+
+    console.log(
+      `rozvrh: s odkazem 1 žák z ${vsichni[0].pocet} v evidenci, ` +
+        `${t.rows[0].pocet} jeho termínů. V pořádku.`,
+    );
+  } finally {
+    klient.release();
+  }
+}
+
 async function main() {
   const { rows } = await aplikace.query<{ current_user: string; rolbypassrls: boolean }>(`
     select current_user, r.rolbypassrls
@@ -108,10 +205,12 @@ async function main() {
   }
 
   for (const t of TABULKY) await zapni(t);
+  await zapniRozvrh();
 
   console.log("");
   console.log("Ověřuji účtem aplikace, že to opravdu drží:");
   for (const t of TABULKY) await over(t);
+  await overRozvrh();
 
   console.log("");
   console.log("Hotovo.");
