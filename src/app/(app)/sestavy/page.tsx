@@ -16,6 +16,12 @@ const sestavy = [
       "Vede se po kurzech — každý kurz má svou. Seznam zařazených žáků a záznam o výuce: kdy, co se probíralo, kdo učil a kdo byl přítomen.",
   },
   {
+    href: "/zaci",
+    nazev: "Výuka a výcvik žáka",
+    popis:
+      "Doložená výuka a dokončené jízdy jednoho žáka, u jízd i s jeho podpisem. Otevírá se z karty žáka odkazem „Sestava k vytištění“.",
+  },
+  {
     href: "/sestavy/kniha-jizd",
     nazev: "Kniha jízd",
     popis:

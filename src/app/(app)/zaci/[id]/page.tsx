@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { and, asc, eq, ne, or } from "drizzle-orm";
 import { proAutoskolu } from "@/lib/db-tenant";
-import { kurzy, terminy, ucast, ucitele, vycviky, zaci } from "@/db/schema";
+import { kurzy, podpisy, terminy, ucast, ucitele, vycviky, zaci } from "@/db/schema";
 import { vyzadujPrihlaseni } from "@/lib/relace";
 import { formatDatum, vekKDatu } from "@/lib/datum";
 import { formatTelefon } from "@/lib/telefon";
@@ -115,12 +115,23 @@ export default async function KartaZaka({
       )
       .orderBy(asc(terminy.zacatek));
 
-    return { zaznam, jehoTerminy };
+    const podepsane = await tx
+      .select({ terminId: podpisy.terminId })
+      .from(podpisy)
+      .where(
+        and(
+          eq(podpisy.tenantId, kdo.autoskola.id),
+          eq(podpisy.vycvikId, zaznam.v.id),
+        ),
+      );
+
+    return { zaznam, jehoTerminy, podepsane };
   });
 
   if (!nactene) notFound();
 
-  const { zaznam, jehoTerminy } = nactene;
+  const { zaznam, jehoTerminy, podepsane } = nactene;
+  const jePodepsano = new Set(podepsane.map((x) => x.terminId));
   const { v, z, u, k } = zaznam;
 
   const ted = Date.now();
@@ -371,6 +382,72 @@ export default async function KartaZaka({
                   </span>
                 </li>
               ))}
+            </ul>
+          )}
+        </div>
+
+        <div className="col-span-full">
+          <div className="flex flex-wrap items-baseline justify-between gap-x-4">
+            <p className="text-xs text-neutral-500">Co má za sebou</p>
+            <Link
+              href={`/sestavy/zak/${v.id}`}
+              className="text-xs text-neutral-500 underline-offset-4 hover:underline"
+            >
+              Sestava k vytištění
+            </Link>
+          </div>
+
+          {probehle.length === 0 ? (
+            <p className="text-sm text-neutral-400">zatím nic</p>
+          ) : (
+            <ul className="mt-0.5 space-y-0.5">
+              {/* Zelená znamená uskutečněno a doloženo: u jízdy ukončení
+                  se stavem tachometru, u konzultace zapsaná účast. Oranžová
+                  je termín, který se konal, ale něco u něj chybí — a to
+                  chceme vidět, ne schovat. */}
+              {probehle.slice(0, 12).map((x) => {
+                const jizda = x.t.druh === "jizda";
+                const hotovo = jizda ? Boolean(x.t.ukoncenoKdy) : x.t.stav === "probehlo";
+
+                return (
+                  <li key={x.t.id} className="text-sm">
+                    <Link
+                      href={`/kalendar/${x.t.id}`}
+                      className={
+                        hotovo
+                          ? "text-emerald-600 underline-offset-4 hover:underline dark:text-emerald-400"
+                          : "text-amber-600 underline-offset-4 hover:underline dark:text-amber-400"
+                      }
+                    >
+                      <span className="tabular-nums">{denAMesic(x.t.zacatek)}</span>{" "}
+                      <span className="tabular-nums">
+                        {rozsah(x.t.zacatek, x.t.delkaMinut)}
+                      </span>{" "}
+                      {jizda ? "jízda" : "teorie"}
+                    </Link>
+                    <span className="text-neutral-500">
+                      {jizda
+                        ? x.t.ukoncenoKdy
+                          ? x.t.kmZacatek !== null && x.t.kmKonec !== null
+                            ? ` · ujeto ${x.t.kmKonec - x.t.kmZacatek} km${
+                                jePodepsano.has(x.t.id) ? " · podepsáno" : ""
+                              }`
+                            : jePodepsano.has(x.t.id)
+                              ? " · podepsáno"
+                              : ""
+                          : x.t.zahajenoKdy
+                            ? " · zahájená, neukončená"
+                            : " · nezahájená"
+                        : x.t.stav !== "probehlo"
+                          ? " · docházka nezapsaná"
+                          : x.pritomen
+                            ? " · byl"
+                            : " · nebyl"}
+                      {x.ucitel ? ` · ${x.ucitel.prijmeni}` : ""}
+                    </span>
+                  </li>
+                );
+              })}
             </ul>
           )}
         </div>
