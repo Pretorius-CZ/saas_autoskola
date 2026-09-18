@@ -434,6 +434,41 @@ export const ucast = pgTable(
   ],
 );
 
+/* ------------------------------------------------------------------ *
+ * POZNÁMKA K ÚČASTI ŽÁKA V KURZU
+ *
+ * Třídní kniha je záznam o člověku, ne jen o odučených hodinách. Kdo
+ * donese žádost a zaplatí, do knihy patří — i když pak celý měsíc
+ * proleží s chřipkou. Sem se k němu dopíše, proč tam ty hodiny nejsou.
+ *
+ * Vlastní tabulka, ne sloupec u výcviku: poznámka patří k jednomu kurzu.
+ * Kdyby žák přešel do jiného, poznámka o nemoci v tom starém by s ním
+ * neměla cestovat.
+ * ------------------------------------------------------------------ */
+
+export const poznamkyKurzu = pgTable(
+  "poznamky_kurzu",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "cascade" }),
+
+    kurzId: uuid("kurz_id")
+      .notNull()
+      .references(() => kurzy.id, { onDelete: "cascade" }),
+    vycvikId: uuid("vycvik_id")
+      .notNull()
+      .references(() => vycviky.id, { onDelete: "cascade" }),
+
+    poznamka: text("poznamka").notNull(),
+
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("poznamka_kurzu_jednou").on(t.kurzId, t.vycvikId)],
+);
+
 export type Kurz = typeof kurzy.$inferSelect;
 export type Termin = typeof terminy.$inferSelect;
 

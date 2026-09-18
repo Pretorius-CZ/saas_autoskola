@@ -19,7 +19,17 @@ config({ path: ".env.local" });
 
 // Tabulky, které mají sloupec tenant_id. Novou tabulku přidej sem
 // ve stejnou chvíli, kdy ji přidáš do schema.ts.
-const TABULKY = ["ucitele", "vozidla", "zaci", "vycviky", "kurzy", "terminy", "ucast", "zmeny"];
+const TABULKY = [
+  "ucitele",
+  "vozidla",
+  "zaci",
+  "vycviky",
+  "kurzy",
+  "terminy",
+  "ucast",
+  "poznamky_kurzu",
+  "zmeny",
+];
 
 const urlVlastnik = process.env.DATABASE_URL_OWNER ?? process.env.DATABASE_URL;
 const urlAplikace = process.env.DATABASE_URL;

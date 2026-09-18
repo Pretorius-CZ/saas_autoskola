@@ -4,16 +4,22 @@ export const dynamic = "force-dynamic";
 
 const sestavy = [
   {
+    href: "/sestavy/evidencni-kniha",
+    nazev: "Evidenční kniha",
+    popis:
+      "Seznam žadatelů podle evidenčních čísel s jejich daty: zahájení a ukončení výcviku, přihláška, zkoušky. Jeden řádek na jeden výcvik.",
+  },
+  {
     href: "/sestavy/tridni-kniha",
     nazev: "Třídní kniha",
     popis:
-      "Záznam o výuce: kdy, co se probíralo, kdo učil a kdo byl přítomen. Skládá se z konzultací a zapsané docházky.",
+      "Vede se po kurzech — každý kurz má svou. Seznam zařazených žáků a záznam o výuce: kdy, co se probíralo, kdo učil a kdo byl přítomen.",
   },
   {
     href: "/sestavy/kniha-jizd",
     nazev: "Kniha jízd",
     popis:
-      "Záznam o výcviku: kdy, s kým, kterým vozidlem a jak dlouho. Skládá se z naplánovaných a proběhlých jízd.",
+      "Záznam o výcviku: kdy, s kým, kterým vozidlem a jak dlouho.",
   },
 ];
 

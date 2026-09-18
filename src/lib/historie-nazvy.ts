@@ -86,6 +86,7 @@ export const NAZVY_TABULEK: Record<string, string> = {
   ucitele: "učitel",
   vozidla: "vozidlo",
   tenants: "autoškola",
+  poznamky_kurzu: "poznámka v třídní knize",
 };
 
 /** Sloupce, jejichž hodnota je odkaz jinam — je potřeba ji přeložit na název. */

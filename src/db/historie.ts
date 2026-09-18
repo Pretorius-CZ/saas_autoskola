@@ -18,7 +18,17 @@ config({ path: ".env.local" });
 
 // Tabulky, jejichž změny se zaznamenávají. Novou tabulku s evidencí
 // přidej sem ve stejnou chvíli, kdy ji přidáš do schema.ts.
-const TABULKY = ["tenants", "ucitele", "vozidla", "zaci", "vycviky", "kurzy", "terminy", "ucast"];
+const TABULKY = [
+  "tenants",
+  "ucitele",
+  "vozidla",
+  "zaci",
+  "vycviky",
+  "kurzy",
+  "terminy",
+  "ucast",
+  "poznamky_kurzu",
+];
 
 const url = process.env.DATABASE_URL_OWNER ?? process.env.DATABASE_URL;
 if (!url) {
