@@ -14,6 +14,7 @@ import {
 import { vyzadujPrihlaseni } from "@/lib/relace";
 import { cas, nazevDne, rozsah } from "@/lib/cas";
 import { PREDMETY } from "@/lib/osnova";
+import { procNe } from "@/lib/jizda-okno";
 import PodpisNahled from "@/components/podpis-nahled";
 import PodpisJizdy from "./podpis-jizdy";
 import KrokJizdy from "./jizda";
@@ -123,6 +124,10 @@ export default async function TerminUcitele({
       ? `Konzultace: ${predmet.nazev}`
       : "Konzultace";
 
+  // Proč to zrovna teď nejde zapsat. Stejné pravidlo jako v akci —
+  // obrazovka o něm jen říká dřív, než člověk klepne.
+  const mimoOkno = jeJizda ? procNe(t.zacatek, t.delkaMinut) : null;
+
   const postup = [
     kroky(Boolean(podpis), "Podpis žáka"),
     kroky(Boolean(t.zahajenoKdy), "Zahájení"),
@@ -189,6 +194,8 @@ export default async function TerminUcitele({
               <p className="text-sm text-neutral-500">
                 Zrušená jízda se nezapisuje.
               </p>
+            ) : mimoOkno && !t.ukoncenoKdy ? (
+              <p className="text-sm text-amber-600 dark:text-amber-400">{mimoOkno}</p>
             ) : !zaznam.vycvikId ? (
               <p className="text-sm text-amber-600 dark:text-amber-400">
                 U téhle jízdy není zapsaný žák, takže není kdo by se podepsal.

@@ -349,9 +349,31 @@ což působí jako dvě různé aplikace.
 
 ## Co zbývá
 
-- zakládání účtů učitelům a žákům (dveře jsou zavřené, klíč nemá nikdo)
-- úprava karet učitelů, vozidel a žáků v aplikaci
-- tisk žádosti do úředního tiskopisu
 - podání na zkoušky (XML pro eTesty + PDF)
-- výuka a výcvik: třídní kniha, kniha jízd, průkaz žadatele
+- notifikace žákům a učitelům e-mailem
 - obnova zapomenutého hesla (potřebuje odesílání e-mailů)
+- cíle osnovy pro rozšíření (B+E, B96, AM, A1, A2)
+- zapnout `KONTROLA_KONTROLNIHO_SOUCTU` v `src/lib/rodne-cislo.ts`
+  **před prvním skutečným žákem**
+
+### Nápad k dopracování: co smí měnit učitel
+
+Michalova poznámka z 18. 9.: *„učitel si termíny měnit nemůže, což je
+možná škoda."*
+
+Dnes učitel jen zapisuje průběh jízdy — přesunout ani zrušit termín
+nemůže, to dělá správce v kalendáři. V praxi ale žák volá učiteli, ne
+autoškole, a učitel stojí u auta s telefonem v ruce.
+
+Co se u toho bude muset rozhodnout, až na to dojde:
+
+- **posunout v rámci dne** (přišel dřív / zdržel se) versus **přesunout
+  na jiný den** — to první je zápis reality, to druhé je změna plánu
+  a dotýká se lhůt
+- **zrušit** termín učitelem: kdo to smí a s jakým důvodem, protože
+  zrušený termín se nepočítá do plnění osnovy
+- kolize s jinými termíny a denní strop podle § 27 — pravidla už v
+  aplikaci jsou (`akce-terminy.ts`), musela by platit i pro učitele
+- všechno se zapíše do historie změn samo, takže dohledatelnost není
+  překážka — překážkou je jen rozhodnutí, co je ještě zápis reality
+  a co už je obcházení plánu

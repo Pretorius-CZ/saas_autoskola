@@ -6,6 +6,7 @@ import { proAutoskolu } from "@/lib/db-tenant";
 import { vyzadujPrihlaseni } from "@/lib/relace";
 import { podpisy, terminy, ucitele } from "@/db/schema";
 import { NEJVIC_BODU, kresbaZTextu, pocetBodu } from "@/lib/podpis-typy";
+import { procNe } from "@/lib/jizda-okno";
 
 /**
  * Průběh jízdy očima učitele: podpis → zahájení → ukončení.
@@ -68,6 +69,12 @@ async function mojeJizda(
   if (!t) return { ok: false, chyba: "Termín nenalezen." };
   if (t.druh !== "jizda") return { ok: false, chyba: "Tohle není jízda." };
   if (t.stav === "zruseno") return { ok: false, chyba: "Jízda je zrušená." };
+
+  // Zapisovat jde jen kolem naplánovaného času. Kontrola je tady, ve
+  // společném místě — schovaná tlačítka na obrazovce nestačí, ta může
+  // zůstat otevřená od včerejška.
+  const pozde = procNe(t.zacatek, t.delkaMinut);
+  if (pozde) return { ok: false, chyba: pozde };
 
   return { ok: true, ucitel, t };
 }
