@@ -10,6 +10,7 @@ const odkazy = [
   { href: "/kalendar", popis: "Kalendář" },
   { href: "/zaci", popis: "Žáci" },
   { href: "/kurzy", popis: "Kurzy" },
+  { href: "/sestavy", popis: "Sestavy" },
   { href: "/ucitele", popis: "Učitelé" },
   { href: "/vozidla", popis: "Vozidla" },
   { href: "/nastaveni", popis: "Nastavení" },
@@ -26,7 +27,7 @@ export default async function AppLayout({
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-6">
-      <header className="flex flex-wrap items-center justify-between gap-2 border-b border-neutral-200 pb-4 dark:border-neutral-800">
+      <header className="netisknout flex flex-wrap items-center justify-between gap-2 border-b border-neutral-200 pb-4 dark:border-neutral-800">
         <div className="flex items-center gap-3">
           {kdo.autoskola.logoData ? (
             // eslint-disable-next-line @next/next/no-img-element
@@ -47,7 +48,7 @@ export default async function AppLayout({
         <Odhlaseni />
       </header>
 
-      <nav className="flex gap-4 overflow-x-auto py-4 text-sm">
+      <nav className="netisknout flex gap-4 overflow-x-auto py-4 text-sm">
         {odkazy.map((o) => (
           <Link
             key={o.href}

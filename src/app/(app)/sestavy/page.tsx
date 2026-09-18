@@ -1,0 +1,45 @@
+import Link from "next/link";
+
+export const dynamic = "force-dynamic";
+
+const sestavy = [
+  {
+    href: "/sestavy/tridni-kniha",
+    nazev: "Třídní kniha",
+    popis:
+      "Záznam o výuce: kdy, co se probíralo, kdo učil a kdo byl přítomen. Skládá se z konzultací a zapsané docházky.",
+  },
+  {
+    href: "/sestavy/kniha-jizd",
+    nazev: "Kniha jízd",
+    popis:
+      "Záznam o výcviku: kdy, s kým, kterým vozidlem a jak dlouho. Skládá se z naplánovaných a proběhlých jízd.",
+  },
+];
+
+export default function Sestavy() {
+  return (
+    <main>
+      <h1 className="text-lg font-semibold">Sestavy</h1>
+      <p className="mt-1 text-sm text-neutral-500">
+        Sestavy nic nepočítají navíc — jen jinak vypisují to, co už v evidenci
+        je. Když v nich něco chybí, chybí to v evidenci a je potřeba to doplnit
+        tam, ne tady.
+      </p>
+
+      <ul className="mt-4 space-y-3">
+        {sestavy.map((s) => (
+          <li
+            key={s.href}
+            className="rounded-xl border border-neutral-200 p-4 dark:border-neutral-800"
+          >
+            <Link href={s.href} className="font-medium underline-offset-4 hover:underline">
+              {s.nazev}
+            </Link>
+            <p className="mt-1 text-sm text-neutral-500">{s.popis}</p>
+          </li>
+        ))}
+      </ul>
+    </main>
+  );
+}
