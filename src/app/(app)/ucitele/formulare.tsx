@@ -257,14 +257,20 @@ export default function SpravaUcitelu({ seznam }: { seznam: Ucitel[] }) {
           {seznam.map((u) => (
             <li
               key={u.id}
-              className="rounded-xl border border-neutral-200 p-4 dark:border-neutral-800"
+              /* Barva rámečku říká, jestli učitel učí — poznat se to má
+                 z přehledu, ne až po rozkliknutí. */
+              className={`rounded-xl border p-4 ${
+                u.aktivni
+                  ? "border-emerald-500/60"
+                  : "border-red-500/60 bg-red-500/5"
+              }`}
             >
               <div className="flex flex-wrap items-baseline justify-between gap-x-4">
                 <p className="font-medium">
                   {u.jmeno} {u.prijmeni}
                   {u.aktivni ? null : (
-                    <span className="ml-2 text-sm font-normal text-neutral-500">
-                      neaktivní
+                    <span className="ml-2 text-sm font-normal text-red-600 dark:text-red-400">
+                      neučí
                     </span>
                   )}
                 </p>

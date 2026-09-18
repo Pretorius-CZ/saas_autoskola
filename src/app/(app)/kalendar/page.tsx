@@ -226,7 +226,7 @@ export default async function Kalendar({
                               rozešly. */}
                           <Link
                             href={`/kalendar/${z.t.id}?upravit=1`}
-                            className="text-xs text-neutral-400 underline-offset-4 hover:underline"
+                            className="rounded border border-blue-500/50 px-2 py-0.5 text-xs font-medium text-blue-600 hover:bg-blue-500/10 dark:text-blue-400"
                           >
                             upravit
                           </Link>

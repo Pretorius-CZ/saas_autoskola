@@ -11,7 +11,7 @@ export default function ZrusitTermin({ id }: { id: string }) {
     return (
       <button
         onClick={() => setPtamSe(true)}
-        className="mt-0.5 text-xs text-neutral-400 underline-offset-4 hover:underline"
+        className="rounded border border-red-500/50 px-2 py-0.5 text-xs font-medium text-red-600 hover:bg-red-500/10 dark:text-red-400"
       >
         zrušit
       </button>
@@ -19,7 +19,7 @@ export default function ZrusitTermin({ id }: { id: string }) {
   }
 
   return (
-    <span className="mt-0.5 flex items-center gap-2 text-xs">
+    <span className="flex items-center gap-2 text-xs">
       <button
         onClick={() => zacni(() => zrusTermin(id))}
         disabled={probiha}
