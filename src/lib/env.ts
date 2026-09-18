@@ -27,6 +27,11 @@ const schema = z.object({
   // stálá adresa ostré verze — tahle je ta, kterou lidé opravdu otevírají
   VERCEL_PROJECT_PRODUCTION_URL: z.string().optional(),
 
+  // Časové pásmo aplikace. Nevyplněné znamená Europe/Prague — viz
+  // src/instrumentation.ts. Nejmenuje se TZ schválně: ten název má
+  // Vercel rezervovaný a odmítne ho.
+  CASOVE_PASMO: z.string().optional(),
+
   NODE_ENV: z
     .enum(["development", "test", "production"])
     .default("development"),
@@ -74,4 +79,9 @@ export function duveryhodneAdresy(): string[] {
   }
 
   return [...new Set(seznam)];
+}
+
+/** Pásmo, ve kterém proces opravdu počítá — ne to, co má nastavené. */
+export function casovePasmo(): string {
+  return Intl.DateTimeFormat().resolvedOptions().timeZone;
 }

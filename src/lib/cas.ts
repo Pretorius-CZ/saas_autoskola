@@ -4,6 +4,11 @@
  * Termíny jsou v databázi uložené i s časovým pásmem, ale plánuje se
  * v místním čase — učitel nepřemýšlí v UTC. Převody jsou tady, aby
  * nebyly rozeseté po obrazovkách.
+ *
+ * POZOR: "místní čas" znamená pásmo procesu. Nastavuje se na jednom
+ * místě v src/instrumentation.ts na Europe/Prague a měří se na /zdravi.
+ * Bez toho by okamzik() na serveru v UTC uložil 18:00 jako 20:00
+ * českého času a nikdo by si toho uvnitř aplikace nevšiml.
  */
 
 import { naText } from "@/lib/datum";

@@ -1,6 +1,7 @@
 import { sql } from "drizzle-orm";
 import { getDb } from "@/db";
 import { sifrovaniFunguje } from "@/lib/sifrovani";
+import { casovePasmo } from "@/lib/env";
 
 /**
  * Veřejná stránka o stavu systému — schválně BEZ přihlášení.
@@ -18,6 +19,20 @@ type Stav = { ok: boolean; popis: string; detail?: string };
 
 async function zjistiStav(): Promise<Stav[]> {
   const stavy: Stav[] = [{ ok: true, popis: "Aplikace běží" }];
+
+  // Pásmo se měří, ne předpokládá. Když server počítá v UTC, uloží se
+  // každý naplánovaný termín o dvě hodiny jinam a v aplikaci to vypadá
+  // správně — pozná se to až na tom, co dostane žák do kalendáře.
+  const pasmo = casovePasmo();
+  stavy.push(
+    pasmo === "Europe/Prague"
+      ? { ok: true, popis: "Čas běží v českém pásmu", detail: pasmo }
+      : {
+          ok: false,
+          popis: "Server počítá v jiném časovém pásmu — termíny se ukládají posunuté",
+          detail: `${pasmo}, má být Europe/Prague`,
+        },
+  );
 
   const db = getDb();
 
