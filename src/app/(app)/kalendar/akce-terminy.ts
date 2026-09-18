@@ -185,6 +185,170 @@ export async function ulozTermin(
   return { hotovo: true };
 }
 
+/**
+ * Úprava už naplánovaného termínu.
+ *
+ * Mění se čas, délka, učitel, vozidlo a popisné údaje. Druh, žák a kurz
+ * se nemění schválně: na nich visí docházka a podpisy, takže přehodit je
+ * by neznamenalo úpravu, ale jiný termín. Na to je zrušit a naplánovat
+ * znovu — a v historii pak je vidět, co se doopravdy stalo.
+ *
+ * Rozjetá jízda se neupravuje. Čas zahájení a stav tachometru dokládají,
+ * že se něco stalo tehdy, kdy se to stalo; posunout k tomu plánovaný čas
+ * by z těch čísel udělalo nesmysl.
+ */
+export async function upravTermin(
+  _predchozi: StavTerminu,
+  f: FormData,
+): Promise<StavTerminu> {
+  const kdo = await vyzadujPrihlaseni();
+
+  const hodnoty: Record<string, string> = {};
+  for (const [k, v] of f.entries()) if (typeof v === "string") hodnoty[k] = v;
+
+  const chybne = (zprava: string, pole?: string): StavTerminu => ({
+    chyba: zprava,
+    pole,
+    hodnoty,
+  });
+
+  const id = text(f, "id");
+  if (!id) return chybne("Chybí, který termín se má upravit.");
+
+  const datum = text(f, "datum");
+  const cas = text(f, "cas");
+  const delka = Number(text(f, "delkaMinut") ?? "90");
+
+  if (!datum || !cas) return chybne("Vyplň datum a čas.", datum ? "cas" : "datum");
+  if (!Number.isInteger(delka) || delka < 15 || delka > 480) {
+    return chybne("Délka musí být mezi 15 a 480 minutami.", "delkaMinut");
+  }
+
+  const zacatek = okamzik(datum, cas);
+  if (!zacatek) return chybne("Neplatné datum nebo čas.", "datum");
+  const konec = new Date(zacatek.getTime() + delka * 60_000);
+
+  const ucitelId = text(f, "ucitelId");
+  const vozidloId = text(f, "vozidloId");
+
+  const potiz = await proAutoskolu(
+    kdo,
+    async (tx): Promise<{ zprava: string; pole?: string } | null> => {
+      const [p] = await tx
+        .select()
+        .from(terminy)
+        .where(and(eq(terminy.id, id), eq(terminy.tenantId, kdo.autoskola.id)))
+        .limit(1);
+
+      if (!p) return { zprava: "Termín nenalezen." };
+      if (p.stav === "zruseno") {
+        return { zprava: "Zrušený termín se neupravuje. Naplánuj nový." };
+      }
+      if (p.zahajenoKdy) {
+        return {
+          zprava:
+            "Jízda je už zahájená, takže se nedá přeplánovat. Když je v ní chyba, zruš ji a naplánuj znovu.",
+        };
+      }
+
+      if (p.druh === "jizda" && !ucitelId) {
+        return { zprava: "U jízdy vyber učitele.", pole: "ucitelId" };
+      }
+      if (p.druh === "teorie" && !text(f, "predmet")) {
+        return { zprava: "U konzultace vyber předmět osnovy.", pole: "predmet" };
+      }
+
+      // --- kolize, sám se sebou se nepočítá -----------------------------
+      const soubezne = await tx
+        .select({
+          id: terminy.id,
+          ucitelId: terminy.ucitelId,
+          vozidloId: terminy.vozidloId,
+          vycvikId: terminy.vycvikId,
+          kurzId: terminy.kurzId,
+        })
+        .from(terminy)
+        .where(
+          and(
+            eq(terminy.tenantId, kdo.autoskola.id),
+            ne(terminy.id, id),
+            ne(terminy.stav, "zruseno"),
+            lt(terminy.zacatek, konec),
+            sql`${terminy.zacatek} + make_interval(mins => ${terminy.delkaMinut}) > ${zacatek}`,
+          ),
+        );
+
+      if (ucitelId && soubezne.some((t) => t.ucitelId === ucitelId)) {
+        return { zprava: "Učitel už v tu dobu někde je.", pole: "ucitelId" };
+      }
+      if (vozidloId && soubezne.some((t) => t.vozidloId === vozidloId)) {
+        return { zprava: "Vozidlo je v tu dobu obsazené.", pole: "vozidloId" };
+      }
+      if (p.vycvikId && soubezne.some((t) => t.vycvikId === p.vycvikId)) {
+        return { zprava: "Žák už v tu dobu jinde jezdí.", pole: "datum" };
+      }
+      if (p.kurzId && soubezne.some((t) => t.kurzId === p.kurzId)) {
+        return { zprava: "Kurz už v tu dobu má jiný termín.", pole: "datum" };
+      }
+
+      // --- denní strop jízd, tenhle termín se do něj nepočítá dvakrát ---
+      if (p.druh === "jizda" && p.vycvikId) {
+        const zacatekDne = new Date(zacatek);
+        zacatekDne.setHours(0, 0, 0, 0);
+        const konecDne = new Date(zacatekDne);
+        konecDne.setDate(konecDne.getDate() + 1);
+
+        const [soucet] = await tx
+          .select({ minut: sql<number>`coalesce(sum(${terminy.delkaMinut}), 0)::int` })
+          .from(terminy)
+          .where(
+            and(
+              eq(terminy.tenantId, kdo.autoskola.id),
+              ne(terminy.id, id),
+              eq(terminy.vycvikId, p.vycvikId),
+              eq(terminy.druh, "jizda"),
+              ne(terminy.stav, "zruseno"),
+              gte(terminy.zacatek, zacatekDne),
+              lt(terminy.zacatek, konecDne),
+            ),
+          );
+
+        if ((soucet?.minut ?? 0) + delka > DEN_MAXIMUM) {
+          return {
+            zprava: `Žák by ten den měl ${((soucet?.minut ?? 0) + delka) / 45} vyučovacích hodin jízdy. Zákon dovoluje nejvýš čtyři (§ 27).`,
+            pole: "delkaMinut",
+          };
+        }
+      }
+
+      await tx
+        .update(terminy)
+        .set({
+          zacatek,
+          delkaMinut: delka,
+          ucitelId,
+          vozidloId: p.druh === "jizda" ? vozidloId : null,
+          predmet: p.druh === "teorie" ? text(f, "predmet") : null,
+          tema: text(f, "tema"),
+          misto: text(f, "misto"),
+          poznamka: text(f, "poznamka"),
+          updatedAt: new Date(),
+        })
+        .where(and(eq(terminy.id, id), eq(terminy.tenantId, kdo.autoskola.id)));
+
+      return null;
+    },
+  );
+
+  if (potiz) return chybne(potiz.zprava, potiz.pole);
+
+  revalidatePath("/kalendar");
+  revalidatePath(`/kalendar/${id}`);
+  revalidatePath("/zaci");
+  revalidatePath("/ucitel");
+  return { hotovo: true };
+}
+
 /** Zrušení termínu. Zůstává v evidenci, jen označený. */
 export async function zrusTermin(id: string) {
   const kdo = await vyzadujPrihlaseni();

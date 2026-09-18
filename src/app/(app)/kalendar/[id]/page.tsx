@@ -8,6 +8,8 @@ import { denAMesic, nazevDne, proAdresu, rozsah } from "@/lib/cas";
 import { PREDMETY } from "@/lib/osnova";
 import Dochazka from "./dochazka";
 import StavTerminu from "./stav";
+import UpravitTermin from "./upravit-termin";
+import ZrusitTermin from "../zrusit-termin";
 
 export const dynamic = "force-dynamic";
 
@@ -87,12 +89,37 @@ export default async function DetailTerminu({
       seznam = clenove.map((c) => ({ ...c, pritomen: podle.get(c.vycvikId) ?? false }));
     }
 
-    return { z, zak, seznam };
+    // Do výběrů v úpravě. Neaktivní se nenabízejí — ale ten, který je
+    // u termínu zapsaný, zůstane, aby z výběru nevypadl.
+    const seznamUcitelu = await tx
+      .select({ id: ucitele.id, jmeno: ucitele.jmeno, prijmeni: ucitele.prijmeni })
+      .from(ucitele)
+      .where(eq(ucitele.tenantId, kdo.autoskola.id))
+      .orderBy(asc(ucitele.prijmeni));
+
+    const seznamVozidel = await tx
+      .select({
+        id: vozidla.id,
+        znacka: vozidla.znacka,
+        typ: vozidla.typ,
+        rz: vozidla.rz,
+      })
+      .from(vozidla)
+      .where(eq(vozidla.tenantId, kdo.autoskola.id))
+      .orderBy(asc(vozidla.znacka));
+
+    return { z, zak, seznam, seznamUcitelu, seznamVozidel };
   });
 
   if (!data) notFound();
 
-  const { z, zak, seznam } = data;
+  const { z, zak, seznam, seznamUcitelu, seznamVozidel } = data;
+
+  // Čas pro políčko ve formuláři: nuly zepředu, jak je má výběr.
+  const dvojmistne = (n: number) => String(n).padStart(2, "0");
+  const casVstup = `${dvojmistne(z.t.zacatek.getHours())}:${dvojmistne(
+    z.t.zacatek.getMinutes(),
+  )}`;
   const predmet = PREDMETY[z.kurz?.skupina ?? "B"]?.find((p) => p.klic === z.t.predmet);
 
   return (
@@ -138,6 +165,39 @@ export default async function DetailTerminu({
           </p>
         ) : null}
       </div>
+
+      <section className="space-y-2">
+        <div className="flex flex-wrap items-center gap-3">
+          <UpravitTermin
+            termin={{
+              id: z.t.id,
+              druh: z.t.druh,
+              datum: proAdresu(z.t.zacatek),
+              cas: casVstup,
+              delkaMinut: z.t.delkaMinut,
+              ucitelId: z.t.ucitelId,
+              vozidloId: z.t.vozidloId,
+              predmet: z.t.predmet,
+              tema: z.t.tema,
+              misto: z.t.misto,
+              poznamka: z.t.poznamka,
+            }}
+            ucitele={seznamUcitelu}
+            vozidla={seznamVozidel}
+            skupinaKurzu={z.kurz?.skupina ?? "B"}
+          />
+
+          {z.t.stav !== "zruseno" ? <ZrusitTermin id={z.t.id} /> : null}
+        </div>
+
+        {z.t.zahajenoKdy ? (
+          <p className="text-xs text-neutral-500">
+            Jízda je zahájená, takže se už nedá přeplánovat. Čas zahájení
+            a stav tachometru dokládají, že se něco stalo tehdy, kdy se to
+            stalo — kdyby v tom byla chyba, zruš ji a naplánuj znovu.
+          </p>
+        ) : null}
+      </section>
 
       {z.t.kurzId ? (
         <section>
