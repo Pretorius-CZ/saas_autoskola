@@ -2,6 +2,7 @@ import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { getDb } from "@/db";
 import { adresaAplikace, duveryhodneAdresy, env } from "@/lib/env";
+import { NEJMENE_ZNAKU } from "@/lib/hesla";
 import * as schema from "@/db/schema";
 
 const db = getDb();
@@ -36,7 +37,7 @@ export const auth = betterAuth({
 
   emailAndPassword: {
     enabled: true,
-    minPasswordLength: 10,
+    minPasswordLength: NEJMENE_ZNAKU,
 
     // ZAVŘENO. Nikdo si tu nezaloží účet sám — účty zakládá autoškola.
     // Správu účtů pro učitele a žáky postavíme jako vlastní obrazovku;

@@ -2,6 +2,7 @@
 
 import { useActionState, useEffect, useState } from "react";
 import { upravUcitele, zalozUcitele, type StavUcitele } from "./akce";
+import PrihlaseniUcitele from "./prihlaseni-ucitele";
 import { dniDo, formatDatum } from "@/lib/datum";
 
 export type Ucitel = {
@@ -17,6 +18,8 @@ export type Ucitel = {
   bankovniUcet: string | null;
   poznamka: string | null;
   aktivni: boolean;
+  maUcet: boolean;
+  uctovyEmail: string | null;
 };
 
 type Hodnoty = Record<string, string>;
@@ -321,6 +324,13 @@ export default function SpravaUcitelu({ seznam }: { seznam: Ucitel[] }) {
                       Upravit
                     </button>
                   </div>
+
+                  <PrihlaseniUcitele
+                    ucitelId={u.id}
+                    email={u.email}
+                    maUcet={u.maUcet}
+                    uctovyEmail={u.uctovyEmail}
+                  />
                 </>
               )}
             </li>

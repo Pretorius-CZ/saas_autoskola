@@ -63,3 +63,45 @@ export async function proRozvrh<T>(
     return prace(tx);
   });
 }
+
+/**
+ * Práce jménem autoškoly, když nemáme přihlášeného uživatele.
+ *
+ * Používá se při vyzvednutí pozvánky: v tu chvíli se zakládá účet a
+ * zapisuje se do evidence, ale nikdo přihlášený ještě není. Kdo to
+ * udělal, se do historie zapíše až v okamžiku, kdy účet existuje.
+ */
+export async function proAutoskoluJako<T>(
+  tenantId: string,
+  uzivatelId: string,
+  prace: (tx: Transakce) => Promise<T>,
+): Promise<T> {
+  const db = getDb();
+  if (!db) throw new Error("Databáze není dostupná.");
+
+  return db.transaction(async (tx) => {
+    await tx.execute(sql`select set_config('app.tenant_id', ${tenantId}, true)`);
+    await tx.execute(sql`select set_config('app.uzivatel_id', ${uzivatelId}, true)`);
+    return prace(tx);
+  });
+}
+
+/**
+ * Čtení pozvánky podle odkazu.
+ *
+ * Stránka s pozvánkou běží bez přihlášení. Databázi se řekne otisk
+ * odkazu a ta vydá jen tu jednu pozvánku a učitele, kterému patří —
+ * i kdyby byl dotaz níž napsaný špatně.
+ */
+export async function proPozvanku<T>(
+  otisk: string,
+  prace: (tx: Transakce) => Promise<T>,
+): Promise<T> {
+  const db = getDb();
+  if (!db) throw new Error("Databáze není dostupná.");
+
+  return db.transaction(async (tx) => {
+    await tx.execute(sql`select set_config('app.pozvanka', ${otisk}, true)`);
+    return prace(tx);
+  });
+}

@@ -2,6 +2,11 @@ import { withSentryConfig } from "@sentry/nextjs";
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Kontrolní sestavení před pushem staví do vlastní složky. Kdyby
+  // stavělo do .next, přepsalo by to, co má právě rozdělané běžící dev
+  // server — a ten by se pak choval podivně bez zjevné příčiny.
+  distDir: process.env.BUILD_KONTROLA === "1" ? ".next-kontrola" : ".next",
+
   // Úřední tiskopis a písmo se načítají za běhu ze souborů. Bez tohohle
   // řádku by je Vercel do nasazení nepřibalil a tisk žádosti by fungoval
   // jen na tvém počítači.

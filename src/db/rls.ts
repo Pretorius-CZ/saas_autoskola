@@ -28,6 +28,7 @@ const TABULKY = [
   "terminy",
   "ucast",
   "poznamky_kurzu",
+  "pozvanky",
   "zmeny",
 ];
 
@@ -197,6 +198,70 @@ async function overRozvrh() {
   }
 }
 
+/**
+ * Pravidla pro pozvánku učitele.
+ *
+ * Stránka s pozvánkou běží bez přihlášení — nemá koho se zeptat, do které
+ * autoškoly patří. Řekne tedy databázi otisk odkazu a ta vydá jen tu
+ * jednu pozvánku a učitele, kterému patří.
+ */
+const OTISK = `nullif(current_setting('app.pozvanka', true), '')`;
+
+async function zapniPozvanky() {
+  await vlastnik.query(`drop policy if exists "pozvanka_odkazem" on "pozvanky"`);
+  await vlastnik.query(`
+    create policy "pozvanka_odkazem" on "pozvanky" for select
+      using (token_otisk = ${OTISK})
+  `);
+
+  await vlastnik.query(`drop policy if exists "pozvanka_ucitel" on "ucitele"`);
+  await vlastnik.query(`
+    create policy "pozvanka_ucitel" on "ucitele" for select
+      using (exists (
+        select 1 from pozvanky p
+         where p.ucitel_id = ucitele.id
+           and p.token_otisk = ${OTISK}))
+  `);
+
+  console.log("Zapnuto pravidlo pro pozvánku učitele.");
+}
+
+/** Ověří, že odkaz na pozvánku ukáže jednu pozvánku, ne všechny. */
+async function overPozvanky() {
+  const { rows } = await vlastnik.query("select token_otisk from pozvanky limit 1");
+  if (rows.length === 0) {
+    console.log("pozvanky: zatím žádná neexistuje, nemám co změřit.");
+    return;
+  }
+
+  const { rows: vsechny } = await vlastnik.query(
+    "select count(*)::int as pocet from pozvanky",
+  );
+
+  const klient = await aplikace.connect();
+  try {
+    await klient.query("begin");
+    await klient.query("select set_config('app.pozvanka', $1, true)", [
+      rows[0].token_otisk,
+    ]);
+    const p = await klient.query("select count(*)::int as pocet from pozvanky");
+    const u = await klient.query("select count(*)::int as pocet from ucitele");
+    await klient.query("commit");
+
+    if (p.rows[0].pocet !== 1 || u.rows[0].pocet !== 1) {
+      throw new Error(
+        `pozvanky: s odkazem je vidět ${p.rows[0].pocet} pozvánek a ${u.rows[0].pocet} učitelů. Mělo by být po jednom.`,
+      );
+    }
+
+    console.log(
+      `pozvanky: s odkazem 1 pozvánka z ${vsechny[0].pocet} a 1 učitel. V pořádku.`,
+    );
+  } finally {
+    klient.release();
+  }
+}
+
 async function main() {
   const { rows } = await aplikace.query<{ current_user: string; rolbypassrls: boolean }>(`
     select current_user, r.rolbypassrls
@@ -216,11 +281,13 @@ async function main() {
 
   for (const t of TABULKY) await zapni(t);
   await zapniRozvrh();
+  await zapniPozvanky();
 
   console.log("");
   console.log("Ověřuji účtem aplikace, že to opravdu drží:");
   for (const t of TABULKY) await over(t);
   await overRozvrh();
+  await overPozvanky();
 
   console.log("");
   console.log("Hotovo.");

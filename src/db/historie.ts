@@ -28,6 +28,7 @@ const TABULKY = [
   "terminy",
   "ucast",
   "poznamky_kurzu",
+  "pozvanky",
 ];
 
 const url = process.env.DATABASE_URL_OWNER ?? process.env.DATABASE_URL;

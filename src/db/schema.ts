@@ -469,6 +469,40 @@ export const poznamkyKurzu = pgTable(
   (t) => [uniqueIndex("poznamka_kurzu_jednou").on(t.kurzId, t.vycvikId)],
 );
 
+/* ------------------------------------------------------------------ *
+ * POZVÁNKY UČITELŮ
+ *
+ * Účet zakládá správce, ale heslo si volí učitel sám ve svém prohlížeči.
+ * Správce mu pošle jednorázový odkaz; heslo tak nikdy nikam necestuje
+ * a nezůstane viset v žádné poště.
+ *
+ * V tabulce je jen OTISK odkazu, ne odkaz sám. Kdo se dostane
+ * k databázi, nezíská tím přihlášení — stejně jako u hesel.
+ * ------------------------------------------------------------------ */
+
+export const pozvanky = pgTable(
+  "pozvanky",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "cascade" }),
+
+    ucitelId: uuid("ucitel_id")
+      .notNull()
+      .references(() => ucitele.id, { onDelete: "cascade" }),
+
+    tokenOtisk: text("token_otisk").notNull(),
+
+    platnostDo: timestamp("platnost_do", { withTimezone: true }).notNull(),
+    pouzitoKdy: timestamp("pouzito_kdy", { withTimezone: true }),
+
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("pozvanka_otisk_unikat").on(t.tokenOtisk)],
+);
+
 export type Kurz = typeof kurzy.$inferSelect;
 export type Termin = typeof terminy.$inferSelect;
 

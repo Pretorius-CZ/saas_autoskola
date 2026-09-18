@@ -50,6 +50,9 @@ export const NAZVY_POLI: Record<string, string> = {
   barva: "Barva",
   logo_data: "Logo",
   aktivni: "Aktivní",
+  user_id: "Přihlášení",
+  platnost_do: "Pozvánka platí do",
+  pouzito_kdy: "Pozvánka použita",
   // učitelé
   cislo_osvedceni: "Číslo osvědčení",
   osvedceni_platnost_do: "Osvědčení platí do",
@@ -87,6 +90,7 @@ export const NAZVY_TABULEK: Record<string, string> = {
   vozidla: "vozidlo",
   tenants: "autoškola",
   poznamky_kurzu: "poznámka v třídní knize",
+  pozvanky: "pozvánka učitele",
 };
 
 /** Sloupce, jejichž hodnota je odkaz jinam — je potřeba ji přeložit na název. */

@@ -1,24 +1,41 @@
 import Link from "next/link";
-import { asc, eq } from "drizzle-orm";
+import { and, asc, eq, inArray } from "drizzle-orm";
 import { proAutoskolu } from "@/lib/db-tenant";
-import { ucitele } from "@/db/schema";
-import { vyzadujPrihlaseni } from "@/lib/relace";
+import { ucitele, users } from "@/db/schema";
+import { vyzadujSpravce } from "@/lib/relace";
 import SpravaUcitelu from "./formulare";
 
 export const dynamic = "force-dynamic";
 
 export default async function Ucitele() {
-  const kdo = await vyzadujPrihlaseni();
+  const kdo = await vyzadujSpravce();
 
-  // Podmínku na autoškolu píšeme dál, i když ji databáze hlídá sama.
-  // Dva zámky na jedněch dveřích jsou levné; chybějící zámek ne.
-  const seznam = await proAutoskolu(kdo, (tx) =>
-    tx
+  const { seznam, ucty } = await proAutoskolu(kdo, async (tx) => {
+    // Podmínku na autoškolu píšeme dál, i když ji databáze hlídá sama.
+    // Dva zámky na jedněch dveřích jsou levné; chybějící zámek ne.
+    const seznam = await tx
       .select()
       .from(ucitele)
       .where(eq(ucitele.tenantId, kdo.autoskola.id))
-      .orderBy(asc(ucitele.prijmeni), asc(ucitele.jmeno)),
-  );
+      .orderBy(asc(ucitele.prijmeni), asc(ucitele.jmeno));
+
+    // Tabulka uživatelů izolaci po autoškolách nemá — přihlašování ji
+    // potřebuje číst ještě než víme, kdo se ptá. Proto se tu na autoškolu
+    // ptáme sami.
+    const idcka = seznam.map((u) => u.userId).filter((x): x is string => Boolean(x));
+
+    const ucty =
+      idcka.length === 0
+        ? []
+        : await tx
+            .select({ id: users.id, email: users.email })
+            .from(users)
+            .where(and(inArray(users.id, idcka), eq(users.tenantId, kdo.autoskola.id)));
+
+    return { seznam, ucty };
+  });
+
+  const emailUctu = new Map(ucty.map((u) => [u.id, u.email]));
 
   return (
     <main>
@@ -47,6 +64,8 @@ export default async function Ucitele() {
           bankovniUcet: u.bankovniUcet,
           poznamka: u.poznamka,
           aktivni: u.aktivni,
+          maUcet: Boolean(u.userId),
+          uctovyEmail: u.userId ? (emailUctu.get(u.userId) ?? null) : null,
         }))}
       />
     </main>

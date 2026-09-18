@@ -61,3 +61,15 @@ export async function vyzadujPrihlaseni(): Promise<Prihlaseny> {
     autoskola,
   };
 }
+
+/**
+ * Obrazovky, které patří správci autoškoly.
+ *
+ * Učitele nevyhazuje na přihlášení — pošle ho do jeho části aplikace.
+ * Přihlášený je, jen sem nepatří.
+ */
+export async function vyzadujSpravce(): Promise<Prihlaseny> {
+  const kdo = await vyzadujPrihlaseni();
+  if (kdo.role !== "spravce") redirect("/ucitel");
+  return kdo;
+}

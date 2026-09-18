@@ -16,6 +16,9 @@
 # next.js
 /.next/
 /out/
+# sestaveni pro kontrolu pred pushem - vlastni slozka, aby nesahalo
+# na .next, ktere prave pouziva bezici dev server
+/.next-kontrola/
 
 # production
 /build

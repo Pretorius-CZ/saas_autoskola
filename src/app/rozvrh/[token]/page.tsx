@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { nactiRozvrh, nazevTerminu } from "./data";
 import { denAMesic, nazevDne, rozsah } from "@/lib/cas";
+import { adresaAplikace } from "@/lib/env";
+import Kopirovat from "@/components/kopirovat";
 
 /**
  * Veřejný rozvrh žáka.
@@ -33,6 +35,8 @@ export default async function Rozvrh({
 
   if (!data) notFound();
 
+  const odkazNaKalendar = `${adresaAplikace()}/rozvrh/${token}/kalendar.ics`;
+
   const ted = Date.now();
   const budouci = data.terminy.filter((t) => t.zacatek.getTime() >= ted);
   const probehle = data.terminy
@@ -58,10 +62,21 @@ export default async function Rozvrh({
       </a>
       <p className="mt-1.5 text-xs text-neutral-500">
         Stáhne se soubor, který si telefon sám otevře v kalendáři. Upozorní
-        tě hodinu předem. Když chceš, aby se změny termínů propisovaly samy,
-        přidej si v Google kalendáři tenhle odkaz přes „Přidat kalendář →
-        Z adresy URL“.
+        tě hodinu předem.
       </p>
+
+      <div className="mt-3">
+        <p className="text-xs text-neutral-500">
+          Chceš, aby se změny termínů propisovaly samy? Přidej si tenhle odkaz
+          v Google kalendáři přes „Přidat kalendář → Z adresy URL“.
+        </p>
+        <div className="mt-0.5 flex items-center gap-2">
+          <p className="min-w-0 flex-1 break-all rounded-lg bg-neutral-100 px-3 py-2 font-mono text-xs dark:bg-neutral-900">
+            {odkazNaKalendar}
+          </p>
+          <Kopirovat text={odkazNaKalendar} popis="Kopírovat odkaz" />
+        </div>
+      </div>
 
       <section className="mt-8">
         <h2 className="text-xs font-medium uppercase tracking-wide text-neutral-400">

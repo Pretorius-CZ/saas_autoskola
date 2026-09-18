@@ -194,7 +194,7 @@ ne náhrada za pečlivost.
 `TABULKY` v `src/db/rls.ts` a spusť `npm run db:rls`. Jinak zůstane
 nechráněná a nic tě na to neupozorní.
 
-## Past, na kterou jsem naletěl dvakrát
+## Pasti, na které jsem naletěl opakovaně
 
 **Formulář po odeslání přijde o obsah.** React formulář po doběhnutí akce
 vyprázdní: textová pole se vrátí na `defaultValue` a rozbalovací seznamy
@@ -212,6 +212,32 @@ znovu u plánování termínu.
 uvnitř komponenty formuláře. React ji při každém stisku klávesy považuje
 za nový prvek, políčko zahodí a kurzor zmizí — dá se napsat vždycky jen
 jeden znak.
+
+**Soubor `"use server"` smí vyvážet jen asynchronní funkce.** Žádné
+konstanty, žádné objekty. Naletěl jsem na to třikrát: `MILNIKY`,
+`DEN_VAROVANI`, `NEJMENE_ZNAKU`. Konstanta patří do vlastního souboru
+(viz `src/lib/milniky-typy.ts`, `src/lib/hesla.ts`), ze kterého si ji
+vezme akce i formulář.
+
+Typová kontrola tohle **nechytí** — je to pravidlo Next.js, ne typu.
+Proto `push.ps1` před odesláním projekt celý sestaví.
+
+**Červený rámeček u chybného pole** patří do `globals.css` jako
+`.pole-chyba`, ne k jednotlivým vstupům. Napsané u vstupu vedle
+`dark:border-neutral-700` se v tmavém motivu neprosadí — Tailwind
+zapisuje varianty s `dark:` později. Na světlém pozadí to funguje, na
+tmavém ne, a nikdo netuší proč.
+
+## Pravidlo: co jde zkopírovat, má tlačítko
+
+Kdekoli je na obrazovce něco, co má člověk přenést jinam — odkaz na
+rozvrh, odkaz do kalendáře, pozvánka, vygenerované heslo — patří k tomu
+tlačítko **Kopírovat**. Označovat dlouhý odkaz myší je na telefonu skoro
+nemožné a na počítači otrava.
+
+Používej `src/components/kopirovat.tsx`, ne vlastní kopii. Když prohlížeč
+schránku nepustí, tlačítko to řekne („Nejde — označ ručně") místo aby se
+tvářilo, že se nic nestalo.
 
 ## Zálohy
 
