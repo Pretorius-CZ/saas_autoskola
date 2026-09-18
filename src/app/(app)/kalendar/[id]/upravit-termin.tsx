@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useActionState, useEffect, useState } from "react";
 import { CASY, DELKY } from "@/lib/cas";
 import { PREDMETY } from "@/lib/osnova";
@@ -29,6 +31,9 @@ export default function UpravitTermin({
   ucitele,
   vozidla,
   skupinaKurzu,
+  otevreno,
+  odkazOtevrit,
+  odkazZavrit,
 }: {
   termin: {
     id: string;
@@ -46,9 +51,20 @@ export default function UpravitTermin({
   ucitele: Ucitel[];
   vozidla: Vozidlo[];
   skupinaKurzu: string;
+  /**
+   * Otevřenost řídí adresa (?upravit=1), ne vnitřní stav.
+   *
+   * U plánování nového termínu to jednou byl useState a přechod na jinou
+   * adresu ho nepřepočítal — odkaz změnil adresu a formulář zůstal
+   * zavřený. Adresa je jeden zdroj pravdy a odpadá tím celá třída
+   * takových nesouladů.
+   */
+  otevreno?: boolean;
+  odkazOtevrit: string;
+  odkazZavrit: string;
 }) {
   const [stav, akce, probiha] = useActionState<StavTerminu, FormData>(upravTermin, {});
-  const [otevreno, setOtevreno] = useState(false);
+  const smer = useRouter();
 
   const [h, setH] = useState<Hodnoty>({
     datum: termin.datum,
@@ -73,7 +89,7 @@ export default function UpravitTermin({
         return n;
       });
     }
-    if (stav.hotovo) setOtevreno(false);
+    if (stav.hotovo) smer.replace(odkazZavrit);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stav]);
 
@@ -85,13 +101,9 @@ export default function UpravitTermin({
 
   if (!otevreno) {
     return (
-      <button
-        type="button"
-        onClick={() => setOtevreno(true)}
-        className="tlacitko-vedlejsi"
-      >
+      <Link href={odkazOtevrit} className="tlacitko-vedlejsi">
         Upravit termín
-      </button>
+      </Link>
     );
   }
 
@@ -244,13 +256,12 @@ export default function UpravitTermin({
         <button type="submit" disabled={probiha} className="tlacitko">
           {probiha ? "Ukládám…" : "Uložit změny"}
         </button>
-        <button
-          type="button"
-          onClick={() => setOtevreno(false)}
+        <Link
+          href={odkazZavrit}
           className="text-sm text-neutral-500 underline-offset-4 hover:underline"
         >
           Zpět bez uložení
-        </button>
+        </Link>
       </div>
 
       <p className="mt-2 text-xs text-neutral-500">

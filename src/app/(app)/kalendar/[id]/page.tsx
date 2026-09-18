@@ -22,10 +22,14 @@ const DRUHY: Record<string, string> = {
 
 export default async function DetailTerminu({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { id } = await params;
+  const dotaz = await searchParams;
+  const upravuje = dotaz.upravit === "1";
   const kdo = await vyzadujPrihlaseni();
 
   const data = await proAutoskolu(kdo, async (tx) => {
@@ -185,6 +189,9 @@ export default async function DetailTerminu({
             ucitele={seznamUcitelu}
             vozidla={seznamVozidel}
             skupinaKurzu={z.kurz?.skupina ?? "B"}
+            otevreno={upravuje}
+            odkazOtevrit={`/kalendar/${z.t.id}?upravit=1`}
+            odkazZavrit={`/kalendar/${z.t.id}`}
           />
 
           {z.t.stav !== "zruseno" ? <ZrusitTermin id={z.t.id} /> : null}

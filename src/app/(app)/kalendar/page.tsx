@@ -218,7 +218,21 @@ export default async function Kalendar({
                           .join(" · ")}
                       </p>
 
-                      {z.t.stav !== "zruseno" ? <ZrusitTermin id={z.t.id} /> : null}
+                      {z.t.stav !== "zruseno" ? (
+                        <div className="mt-0.5 flex flex-wrap items-center gap-3">
+                          {/* Upravit vede rovnou do otevřeného formuláře na
+                              detailu. Formulář je jen na jednom místě —
+                              dvě kopie téhož by se dřív nebo později
+                              rozešly. */}
+                          <Link
+                            href={`/kalendar/${z.t.id}?upravit=1`}
+                            className="text-xs text-neutral-400 underline-offset-4 hover:underline"
+                          >
+                            upravit
+                          </Link>
+                          <ZrusitTermin id={z.t.id} />
+                        </div>
+                      ) : null}
                     </li>
                   ))}
                 </ul>
