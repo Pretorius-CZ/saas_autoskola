@@ -163,6 +163,8 @@ export default async function Kalendar({
       druh: z.t.druh,
       stav: z.t.stav,
       tema: z.t.tema,
+      misto: z.t.misto,
+      poznamka: z.t.poznamka,
       vycvikId: z.t.vycvikId,
       ucitel: z.ucitel ? `${z.ucitel.jmeno} ${z.ucitel.prijmeni}` : null,
       vozidlo: z.vozidlo ? z.vozidlo.rz : null,
@@ -191,18 +193,31 @@ export default async function Kalendar({
           Kalendář <span className="font-normal text-neutral-500">{nadpis}</span>
         </h1>
 
+        {/* Přepínač a šipky jsou dvě skupiny. Zalomit se smí mezi nimi,
+            nikdy uvnitř — jinak šipka "další" skončí sama na dalším
+            řádku a vypadá to jako chyba. */}
         <div className="flex flex-wrap items-center gap-2 text-sm">
           <Prepinac pohled={pohled} datum={datumText} />
 
-          <Link href={adresa(predchozi)} className="tlacitko-vedlejsi" aria-label="Předchozí">
-            ←
-          </Link>
-          <Link href={`/kalendar?pohled=${pohled}`} className="tlacitko-vedlejsi">
-            Dnes
-          </Link>
-          <Link href={adresa(dalsi)} className="tlacitko-vedlejsi" aria-label="Další">
-            →
-          </Link>
+          <div className="flex shrink-0 flex-nowrap items-center gap-1">
+            <Link
+              href={adresa(predchozi)}
+              className="tlacitko-vedlejsi px-3"
+              aria-label="Předchozí"
+            >
+              ←
+            </Link>
+            <Link href={`/kalendar?pohled=${pohled}`} className="tlacitko-vedlejsi px-3">
+              Dnes
+            </Link>
+            <Link
+              href={adresa(dalsi)}
+              className="tlacitko-vedlejsi px-3"
+              aria-label="Další"
+            >
+              →
+            </Link>
+          </div>
         </div>
       </div>
 

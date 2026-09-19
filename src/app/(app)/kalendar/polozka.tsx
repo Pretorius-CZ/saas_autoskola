@@ -16,6 +16,8 @@ export type Polozka = {
   druh: string;
   stav: string;
   tema: string | null;
+  misto: string | null;
+  poznamka: string | null;
   vycvikId: string | null;
   ucitel: string | null;
   vozidlo: string | null;
@@ -72,9 +74,18 @@ export default function PolozkaTerminu({
         )}
       </p>
 
+      {/* V týdnu je místa málo, tak jen to nejnutnější. V denním pohledu
+          se vypíše všechno, co je u termínu zapsané — jinak by se pro to
+          muselo klikat do detailu. */}
       <p className="text-xs text-neutral-500">
-        {[t.ucitel, t.vozidlo, t.tema].filter(Boolean).join(" · ")}
+        {[t.ucitel, t.vozidlo, velka ? t.misto : null, t.tema]
+          .filter(Boolean)
+          .join(" · ")}
       </p>
+
+      {velka && t.poznamka ? (
+        <p className="text-xs text-neutral-500">Poznámka: {t.poznamka}</p>
+      ) : null}
 
       {t.stav !== "zruseno" ? (
         <div className="mt-0.5 flex flex-wrap items-center gap-3">
