@@ -29,6 +29,40 @@ export function pridejDny(datum: Date, dnu: number): Date {
   return d;
 }
 
+/** První den měsíce, do kterého datum spadá. */
+export function prvniVMesici(datum: Date): Date {
+  return new Date(datum.getFullYear(), datum.getMonth(), 1);
+}
+
+export function posunMesic(datum: Date, mesicu: number): Date {
+  return new Date(datum.getFullYear(), datum.getMonth() + mesicu, 1);
+}
+
+export function stejnyMesic(a: Date, b: Date): boolean {
+  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth();
+}
+
+const MESICE = [
+  "leden", "únor", "březen", "duben", "květen", "červen",
+  "červenec", "srpen", "září", "říjen", "listopad", "prosinec",
+];
+
+export function nazevMesice(datum: Date): string {
+  return MESICE[datum.getMonth()];
+}
+
+/**
+ * Mřížka měsíce: vždy šest týdnů od pondělí.
+ *
+ * Pevných 42 dní schválně — kdyby měl měsíc jednou pět a jindy šest
+ * řádků, tabulka by při listování poskakovala a oko by ztrácelo místo,
+ * kam se dívalo.
+ */
+export function mrizkaMesice(datum: Date): Date[] {
+  const zacatek = pondeli(prvniVMesici(datum));
+  return Array.from({ length: 42 }, (_, i) => pridejDny(zacatek, i));
+}
+
 /** Sedm dní od pondělí. */
 export function tyden(odPondeli: Date): Date[] {
   return Array.from({ length: 7 }, (_, i) => pridejDny(odPondeli, i));
