@@ -1,9 +1,5 @@
 import type { Metadata } from "next";
-import { headers } from "next/headers";
-import { eq } from "drizzle-orm";
-import { auth } from "@/lib/auth";
-import { getDb } from "@/db";
-import { tenants } from "@/db/schema";
+import { zjistiKdo } from "@/lib/relace";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -15,6 +11,10 @@ export const metadata: Metadata = {
  * Motiv se ukládá u autoškoly, takže ho musíme znát ještě před vykreslením
  * stránky — barvy patří na <html>, ne až někam dovnitř.
  *
+ * Kdo se dívá, zjišťuje `zjistiKdo`, a to jednou za celé vykreslení.
+ * Dřív si to tenhle layout řešil sám a stránka pod ním se ptala znovu —
+ * dvě relace a dva dotazy na autoškolu při každém kliknutí.
+ *
  * Když se to nepovede (třeba na přihlašovací obrazovce, kde ještě nevíme,
  * kdo se dívá), platí "podle systému". Chyba tady nesmí shodit celou
  * aplikaci kvůli barvičkám.
@@ -23,20 +23,13 @@ async function vzhled(): Promise<{ motiv: string; barva: string }> {
   const vychozi = { motiv: "auto", barva: "seda" };
 
   try {
-    const relace = await auth.api.getSession({ headers: await headers() });
-    const tenantId = (relace?.user as { tenantId?: string | null } | undefined)?.tenantId;
-    if (!tenantId) return vychozi;
+    const v = await zjistiKdo();
+    if (v.stav !== "ok") return vychozi;
 
-    const db = getDb();
-    if (!db) return vychozi;
-
-    const [t] = await db
-      .select({ motiv: tenants.motiv, barva: tenants.barva })
-      .from(tenants)
-      .where(eq(tenants.id, tenantId))
-      .limit(1);
-
-    return { motiv: t?.motiv ?? "auto", barva: t?.barva ?? "seda" };
+    return {
+      motiv: v.kdo.autoskola.motiv ?? "auto",
+      barva: v.kdo.autoskola.barva ?? "seda",
+    };
   } catch {
     return vychozi;
   }

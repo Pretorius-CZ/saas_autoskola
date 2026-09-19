@@ -24,6 +24,8 @@ const schema = z.object({
   VERCEL_ENV: z.enum(["production", "preview", "development"]).optional(),
   // adresa konkrétního nasazení, mění se s každým buildem
   VERCEL_URL: z.string().optional(),
+  // ve kterém datovém centru funkce běží — kvůli vzdálenosti k databázi
+  VERCEL_REGION: z.string().optional(),
   // stálá adresa ostré verze — tahle je ta, kterou lidé opravdu otevírají
   VERCEL_PROJECT_PRODUCTION_URL: z.string().optional(),
 

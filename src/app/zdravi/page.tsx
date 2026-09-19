@@ -1,7 +1,7 @@
 import { sql } from "drizzle-orm";
 import { getDb } from "@/db";
 import { sifrovaniFunguje } from "@/lib/sifrovani";
-import { casovePasmo } from "@/lib/env";
+import { casovePasmo, env } from "@/lib/env";
 
 /**
  * Veřejná stránka o stavu systému — schválně BEZ přihlášení.
@@ -44,11 +44,27 @@ async function zjistiStav(): Promise<Stav[]> {
   try {
     const zacatek = Date.now();
     await db.execute(sql`select 1`);
-    stavy.push({
-      ok: true,
-      popis: "Databáze odpovídá",
-      detail: `${Date.now() - zacatek} ms`,
-    });
+    const ms = Date.now() - zacatek;
+
+    // Na tomhle čísle stojí rychlost celé aplikace. Jedno otevření
+    // stránky znamená několik cest k databázi a zpátky, takže se každá
+    // milisekunda násobí. Do ~15 ms je databáze prakticky vedle; nad
+    // 50 ms je skoro jistě v jiné části světa než aplikace a je to na
+    // přesun jednoho nastavení, ne na přepisování kódu.
+    const kdeBezime = env.VERCEL_REGION ? ` · aplikace běží v ${env.VERCEL_REGION}` : "";
+
+    stavy.push(
+      ms <= 15
+        ? { ok: true, popis: "Databáze odpovídá rychle", detail: `${ms} ms${kdeBezime}` }
+        : {
+            ok: false,
+            popis:
+              ms > 50
+                ? "Databáze odpovídá pomalu — nejspíš je v jiném regionu než aplikace"
+                : "Databáze odpovídá pomaleji, než by měla",
+            detail: `${ms} ms${kdeBezime}`,
+          },
+    );
   } catch {
     // Podrobnosti schválně neukazujeme — chybová hláška z databáze
     // umí prozradit víc, než je zdrávo. Celá je v Sentry.

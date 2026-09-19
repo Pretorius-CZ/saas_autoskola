@@ -29,8 +29,13 @@ export async function proAutoskolu<T>(
   const uzivatelId = typeof kdo === "string" ? "" : kdo.uzivatelId;
 
   return db.transaction(async (tx) => {
-    await tx.execute(sql`select set_config('app.tenant_id', ${tenantId}, true)`);
-    await tx.execute(sql`select set_config('app.uzivatel_id', ${uzivatelId}, true)`);
+    // Obě nastavení jedním příkazem. Dřív to byly dva a každý stál jednu
+    // cestu k databázi a zpátky. To je zadarmo, jen když je databáze
+    // vedle; když je za oceánem, je to sto milisekund navíc pokaždé.
+    await tx.execute(
+      sql`select set_config('app.tenant_id', ${tenantId}, true),
+                 set_config('app.uzivatel_id', ${uzivatelId}, true)`,
+    );
     return prace(tx);
   });
 }
@@ -80,8 +85,13 @@ export async function proAutoskoluJako<T>(
   if (!db) throw new Error("Databáze není dostupná.");
 
   return db.transaction(async (tx) => {
-    await tx.execute(sql`select set_config('app.tenant_id', ${tenantId}, true)`);
-    await tx.execute(sql`select set_config('app.uzivatel_id', ${uzivatelId}, true)`);
+    // Obě nastavení jedním příkazem. Dřív to byly dva a každý stál jednu
+    // cestu k databázi a zpátky. To je zadarmo, jen když je databáze
+    // vedle; když je za oceánem, je to sto milisekund navíc pokaždé.
+    await tx.execute(
+      sql`select set_config('app.tenant_id', ${tenantId}, true),
+                 set_config('app.uzivatel_id', ${uzivatelId}, true)`,
+    );
     return prace(tx);
   });
 }
